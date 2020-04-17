@@ -82,9 +82,11 @@
 /* Application specific includes */
 #include <Board.h>
 
-#include <project_zero.h>
+#include <base_dev.h>
 #include <util.h>
+#include <base_dev.h>
 
+#include "dev_if.h"
 /*********************************************************************
  * MACROS
  */
@@ -126,8 +128,7 @@
 #define PZ_SEND_PARAM_UPD_EVT    8  /* Request parameter update req be sent        */
 #define PZ_CONN_EVT              9  /* Connection Event End notice                 */
 
-// General discoverable mode: advertise indefinitely
-#define DEFAULT_DISCOVERABLE_MODE             GAP_ADTYPE_FLAGS_GENERAL
+
 
 // Minimum connection interval (units of 1.25ms, 80=100ms) for parameter update request
 #define DEFAULT_DESIRED_MIN_CONN_INTERVAL     12
@@ -273,29 +274,6 @@ static Queue_Handle appMsgQueueHandle;
 // GAP GATT Attributes
 static uint8_t attDeviceName[GAP_DEVICE_NAME_LEN] = "";
 
-// Advertisement data
-static uint8_t advertData[] =
-{
-    0x02, // length of this data
-    GAP_ADTYPE_FLAGS,
-    DEFAULT_DISCOVERABLE_MODE | GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED,
-
-    // complete name
-    12, // length of this data
-    GAP_ADTYPE_LOCAL_NAME_COMPLETE,
-    'P',
-    'r',
-    'o',
-    'j',
-    'e',
-    'c',
-    't',
-    'Z',
-    'e',
-    'r',
-    'o',
-};
-
 // Scan Response Data
 static uint8_t scanRspData[] =
 {
@@ -361,12 +339,12 @@ static uint8_t button1State = 0;
  */
 
 /* Task functions */
-static void ProjectZero_init(void);
-static void ProjectZero_taskFxn(UArg a0,
+static void BaseDevice_init(void);
+static void BaseDevice_taskFxn(UArg a0,
                                 UArg a1);
 
 /* Event message processing functions */
-static void ProjectZero_processStackEvent(uint32_t stack_event);
+static void CommonDev_processStackEvent(uint32_t stack_event);
 static void ProjectZero_processApplicationMessage(pzMsg_t *pMsg);
 static uint8_t ProjectZero_processGATTMsg(gattMsgEvent_t *pMsg);
 static void ProjectZero_processGapMessage(gapEventHdr_t *pMsg);
@@ -388,7 +366,7 @@ static void ProjectZero_DataService_CfgChangeHandler(
     pzCharacteristicData_t *pCharData);
 
 /* Stack or profile callback function */
-static void ProjectZero_advCallback(uint32_t event,
+static void CommonDev_advCallback(uint32_t event,
                                     void *pBuf,
                                     uintptr_t arg);
 static void ProjectZero_passcodeCb(uint8_t *pDeviceAddr,
@@ -526,18 +504,18 @@ void Device_createTask(void)
     taskParams.stackSize = PZ_TASK_STACK_SIZE;
     taskParams.priority = PZ_TASK_PRIORITY;
 
-    Task_construct(&pzTask, ProjectZero_taskFxn, &taskParams, NULL);
+    Task_construct(&pzTask, BaseDevice_taskFxn, &taskParams, NULL);
 }
 
 /*********************************************************************
- * @fn      ProjectZero_init
+ * @fn      BaseDevice_init
  *
  * @brief   Called during initialization and contains application
  *          specific initialization (ie. hardware initialization/setup,
  *          table initialization, power up notification, etc), and
  *          profile initialization/setup.
  */
-static void ProjectZero_init(void)
+static void BaseDevice_init(void)
 {
     // ******************************************************************
     // NO STACK API CALLS CAN OCCUR BEFORE THIS CALL TO ICall_registerApp
@@ -699,16 +677,16 @@ static void ProjectZero_init(void)
 }
 
 /*********************************************************************
- * @fn      ProjectZero_taskFxn
+ * @fn      BaseDevice_taskFxn
  *
  * @brief   Application task entry point for the Project Zero.
  *
  * @param   a0, a1 - not used.
  */
-static void ProjectZero_taskFxn(UArg a0, UArg a1)
+static void BaseDevice_taskFxn(UArg a0, UArg a1)
 {
     // Initialize application
-    ProjectZero_init();
+    BaseDevice_init();
 
     // Application main loop
     for(;; )
@@ -741,7 +719,7 @@ static void ProjectZero_taskFxn(UArg a0, UArg a1)
                     if(pEvt->signature == 0xffff)
                     {
                         // Process stack events
-                        ProjectZero_processStackEvent(pEvt->event_flag);
+                        CommonDev_processStackEvent(pEvt->event_flag);
                     }
                     else
                     {
@@ -820,7 +798,7 @@ static void ProjectZero_processL2CAPMsg(l2capSignalEvent_t *pMsg)
 
 
 /*********************************************************************
- * @fn      ProjectZero_processStackEvent
+ * @fn      CommonDev_processStackEvent
  *
  * @brief   Process stack event. The event flags received are user-selected
  *          via previous calls to stack APIs.
@@ -829,7 +807,7 @@ static void ProjectZero_processL2CAPMsg(l2capSignalEvent_t *pMsg)
  *
  * @return  none
  */
-static void ProjectZero_processStackEvent(uint32_t stack_event)
+static void CommonDev_processStackEvent(uint32_t stack_event)
 {
     // Intentionally blank
 }
@@ -1032,7 +1010,7 @@ static void ProjectZero_processGapMessage(gapEventHdr_t *pMsg)
             GapAdv_params_t advParamLegacy = GAPADV_PARAMS_LEGACY_SCANN_CONN;
 
             // Create Advertisement set #1 and assign handle
-            status = GapAdv_create(&ProjectZero_advCallback, &advParamLegacy,
+            status = GapAdv_create(&CommonDev_advCallback, &advParamLegacy,
                                    &advHandleLegacy);
             APP_ASSERT(status == SUCCESS);
 
@@ -2085,7 +2063,7 @@ static void ProjectZero_updateCharVal(pzCharacteristicData_t *pCharData)
  *          pBuf - data potentially accompanying event
  *          arg - not used
  */
-static void ProjectZero_advCallback(uint32_t event, void *pBuf, uintptr_t arg)
+static void CommonDev_advCallback(uint32_t event, void *pBuf, uintptr_t arg)
 {
     pzGapAdvEventData_t *eventData = ICall_malloc(sizeof(pzGapAdvEventData_t));
 

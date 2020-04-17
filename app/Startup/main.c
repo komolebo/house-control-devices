@@ -47,6 +47,8 @@
 /*******************************************************************************
  * INCLUDES
  */
+#include <base_dev.h>
+#include "devices/motion.h"
 #include <stdint.h>
 
 #include <xdc/runtime/Error.h>
@@ -64,7 +66,6 @@
 #include <icall.h>
 #include "hal_assert.h"
 #include "bcomdef.h"
-#include "project_zero.h"
 
 #ifndef USE_DEFAULT_USER_CFG
 #include "ble_user_config.h"
