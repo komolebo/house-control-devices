@@ -11,9 +11,28 @@
 /* include here device headers: */
 #include "devices/motion.h"
 
+
+/*********************************************************************
+ *  EXTERNAL VARIABLES
+ */
+extern const uint8_t * SOFTWARE_VERSION;
 extern const DeviceType DEVICE_TYPE;
 
+/*********************************************************************
+ * CONSTANTS
+ */
 
+/*********************************************************************
+ * MACROS
+ */
+
+/*********************************************************************
+ * TYPEDEFS
+ */
+
+/*********************************************************************
+ * FUNCTIONS
+ */
 void CustomDevice_processGapMessage(uint8_t gap_msg);
 
 

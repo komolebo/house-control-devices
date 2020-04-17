@@ -12,6 +12,13 @@
 #include <bcomdef.h>
 #include <devinfoservice.h>
 
+/*********************************************************************
+ * CONSTANTS
+ */
+
+/*********************************************************************
+ * MACROS
+ */
 #define VAR_NAME_TO_STR(var_name) (#var_name)
 
 // General discoverable mode: advertise indefinitely
@@ -20,7 +27,9 @@
 // Advert data header len to determine name string address
 #define ADVERT_DATA_HEADER_LEN  (5)
 
-
+/*********************************************************************
+ * TYPEDEFS
+ */
 enum DeviceType
 {
     DEVICE_MOTION,
@@ -30,10 +39,15 @@ enum DeviceType
 };
 
 typedef enum DeviceType DeviceType;
-
-
-
+/*********************************************************************
+ *  EXTERNAL VARIABLES
+ */
 extern const uint8_t * DevicesName[DEVICE_COUNT];
+
+/*********************************************************************
+ * FUNCTIONS
+ */
+
 
 
 #endif /* APPLICATION_COMMON_DEV_H_ */

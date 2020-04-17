@@ -16,6 +16,7 @@
 #define ADVERT_DATA_NAME                'M', 'o', 't', 'i', 'o', 'n'
 #define ADVERT_DATA_NAME_DISPLAY_LEN    (7)  // and terminal zero '\0'
 
+
 // Advertisement data
 extern uint8_t advertData[ADVERT_DATA_NAME_DISPLAY_LEN + ADVERT_DATA_HEADER_LEN];
 

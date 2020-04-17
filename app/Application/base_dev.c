@@ -614,6 +614,9 @@ static void BaseDevice_init(void)
     GATTServApp_AddService(GATT_ALL_SERVICES); // GATT Service
     DevInfo_AddService();                      // Device Information Service
 
+    DevInfo_SetParameter(DEVINFO_SOFTWARE_REV, DEVINFO_STR_ATTR_LEN,
+                         (void*)SOFTWARE_VERSION);
+
     // Add services to GATT server and give ID of this task for Indication acks.
     LedService_AddService(selfEntity);
     ButtonService_AddService(selfEntity);

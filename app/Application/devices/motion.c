@@ -6,13 +6,46 @@
  */
 #if MOTION_COMPILE
 
+/*******************************************************************************
+ * INCLUDES
+ */
 #include "motion.h"
 #include "common_dev.h"
 #include <icall.h>
 #include <icall_ble_api.h>
 
+/*********************************************************************
+ * MACROS
+ */
+
+/*********************************************************************
+ * CONSTANTS
+ */
 const DeviceType DEVICE_TYPE = DEVICE_MOTION;
 const uint8_t DEVICE_TYPE_NAME[] = "MOTION";
+
+#define REL_VERSION_PATCH   "0"
+#define REL_VERSION_MINOR   "1"
+#define REL_VERSION_MAJOR   "0"
+
+const uint8_t * SOFTWARE_VERSION =  \
+        REL_VERSION_MAJOR "."       \
+        REL_VERSION_MINOR "."       \
+        REL_VERSION_PATCH;
+
+/*********************************************************************
+ * TYPEDEFS
+ */
+
+/*********************************************************************
+ * VARIABLES
+ */
+
+/*********************************************************************
+ * FUNCTIONS
+ */
+
+
 
 
 void CustomDevice_processGapMessage(uint8_t gap_msg);
