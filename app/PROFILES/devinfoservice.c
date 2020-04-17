@@ -87,6 +87,11 @@ CONST uint8 devInfoSoftwareRevUUID[ATT_BT_UUID_SIZE] =
 {
   LO_UINT16(SOFTWARE_REV_UUID), HI_UINT16(SOFTWARE_REV_UUID)
 };
+// Device Type
+CONST uint8 devInfoTypeUUID[ATT_BT_UUID_SIZE] =
+{
+  LO_UINT16(DEVICE_TYPE_UUID), HI_UINT16(DEVICE_TYPE_UUID)
+};
 #ifdef PORTING_COMPLETED
 // System ID
 CONST uint8 devInfoSystemIdUUID[ATT_BT_UUID_SIZE] =
@@ -142,6 +147,9 @@ static uint8 devInfoSerialNumber[DEVINFO_STR_ATTR_LEN+1] = "Serial Number";
 static uint8 devInfoSoftwareRevProps = GATT_PROP_READ;
 static uint8 devInfoSoftwareRev[DEVINFO_STR_ATTR_LEN+1] = "Software Revision";
 
+// Serial Number String characteristic
+static uint8 devInfoTypeProps = GATT_PROP_READ;
+static uint8 devInfoType[DEVINFO_STR_ATTR_LEN+1] = "Base Type";
 #if PORTING_COMPLETED
 // System ID characteristic
 static uint8 devInfoSystemIdProps = GATT_PROP_READ;
@@ -189,6 +197,23 @@ static gattAttribute_t devInfoAttrTbl[] =
         0,
         (uint8 *) devInfoSerialNumber
       },
+
+    // Device Type Declaration
+    {
+      { ATT_BT_UUID_SIZE, characterUUID },
+      GATT_PERMIT_READ,
+      0,
+      &devInfoTypeProps
+    },
+
+      // Device Type Value
+      {
+        { ATT_BT_UUID_SIZE, devInfoTypeUUID },
+        GATT_PERMIT_READ,
+        0,
+        (uint8 *) devInfoType
+      },
+
 #if PORTING_COMPLETED
     // System ID Declaration
     {
@@ -368,6 +393,18 @@ bStatus_t DevInfo_SetParameter( uint8 param, uint8 len, void *value )
         ret = bleInvalidRange;
       }
 
+    case DEVINFO_TYPE:
+      // verify length, leave room for null-terminate char
+      if (len <= DEVINFO_STR_ATTR_LEN)
+      {
+        memset(devInfoType, 0, DEVINFO_STR_ATTR_LEN+1);
+        memcpy(devInfoType, value, len);
+      }
+      else
+      {
+        ret = bleInvalidRange;
+      }
+
 #ifdef PORTING_COMPLETED
      case DEVINFO_SYSTEM_ID:
       // verify length
@@ -456,6 +493,10 @@ bStatus_t DevInfo_GetParameter( uint8 param, void *value )
 
     case DEVINFO_SOFTWARE_REV:
       memcpy(value, devInfoSoftwareRev, DEVINFO_STR_ATTR_LEN);
+      break;
+
+    case DEVINFO_TYPE:
+      memcpy(value, devInfoType, DEVINFO_STR_ATTR_LEN);
       break;
 
 #ifdef PORTING_COMPLETED
@@ -554,6 +595,22 @@ static bStatus_t devInfo_ReadAttrCB( uint16 connHandle, gattAttribute_t *pAttr,
           // copy data
           memcpy(pValue, &(pAttr->pValue[offset]), *pLen);
         }
+      }
+      break;
+
+    case DEVICE_TYPE_UUID:
+      // verify offset
+      if (offset > sizeof(devInfoType))
+      {
+        status = ATT_ERR_INVALID_OFFSET;
+      }
+      else
+      {
+        // determine read length
+        *pLen = MIN(maxLen, (sizeof(devInfoType) - offset));
+
+        // copy data
+        memcpy(pValue, &devInfoType[offset], *pLen);
       }
       break;
 

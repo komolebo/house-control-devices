@@ -9,6 +9,10 @@
 #define APPLICATION_COMMON_DEV_H_
 
 #include <stdint.h>
+#include <bcomdef.h>
+#include <devinfoservice.h>
+
+#define VAR_NAME_TO_STR(var_name) (#var_name)
 
 // General discoverable mode: advertise indefinitely
 #define DEFAULT_DISCOVERABLE_MODE             GAP_ADTYPE_FLAGS_GENERAL
@@ -17,6 +21,19 @@
 #define ADVERT_DATA_HEADER_LEN  (5)
 
 
+enum DeviceType
+{
+    DEVICE_MOTION,
+    DEVICE_SMOKE,
+    DEVICE_GAS,
+    DEVICE_COUNT
+};
+
+typedef enum DeviceType DeviceType;
+
+
+
+extern const uint8_t * DevicesName[DEVICE_COUNT];
 
 
 #endif /* APPLICATION_COMMON_DEV_H_ */

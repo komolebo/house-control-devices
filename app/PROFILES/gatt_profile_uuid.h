@@ -174,6 +174,7 @@ extern "C"
 #define POS_QUALITY_UUID                0x2A69  // Position Quality
 #define LN_FEATURE_UUID                 0x2A6A  // LN Feature
 #define LN_CTRL_PT_UUID                 0x2A6B  // LN Control Point
+#define DEVICE_TYPE_UUID                0x2ABF  // Object Type
 
 /**
  * GATT Unit UUIDs

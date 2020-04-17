@@ -347,7 +347,7 @@ static void BaseDevice_taskFxn(UArg a0,
 static void CommonDev_processStackEvent(uint32_t stack_event);
 static void ProjectZero_processApplicationMessage(pzMsg_t *pMsg);
 static uint8_t ProjectZero_processGATTMsg(gattMsgEvent_t *pMsg);
-static void ProjectZero_processGapMessage(gapEventHdr_t *pMsg);
+static void BaseDevice_processGapMessage(gapEventHdr_t *pMsg);
 static void ProjectZero_processHCIMsg(ICall_HciExtEvt *pMsg);
 static void ProjectZero_processPairState(pzPairStateData_t *pPairState);
 static void ProjectZero_processPasscode(pzPasscodeReq_t *pReq);
@@ -727,7 +727,7 @@ static void BaseDevice_taskFxn(UArg a0, UArg a1)
                         {
                         case GAP_MSG_EVENT:
                             // Process GAP message
-                            ProjectZero_processGapMessage((gapEventHdr_t*) pMsg);
+                            BaseDevice_processGapMessage((gapEventHdr_t*) pMsg);
                             break;
 
                         case GATT_MSG_EVENT:
@@ -953,15 +953,17 @@ static void ProjectZero_processApplicationMessage(pzMsg_t *pMsg)
 }
 
 /*********************************************************************
- * @fn      ProjectZero_processGapMessage
+ * @fn      BaseDevice_processGapMessage
  *
  * @brief   Process an incoming GAP event.
  *
  * @param   pMsg - message to process
  */
-static void ProjectZero_processGapMessage(gapEventHdr_t *pMsg)
+static void BaseDevice_processGapMessage(gapEventHdr_t *pMsg)
 {
-    switch(pMsg->opcode)
+    uint8_t gapMsg = pMsg->opcode;
+
+    switch (gapMsg)
     {
     case GAP_DEVICE_INIT_DONE_EVENT:
     {
@@ -991,6 +993,10 @@ static void ProjectZero_processGapMessage(gapEventHdr_t *pMsg)
             // Set Device Info Service Parameter
             DevInfo_SetParameter(DEVINFO_SYSTEM_ID, DEVINFO_SYSTEM_ID_LEN,
                                  systemId);
+
+            // Set Device Type Info Service Parameter
+            DevInfo_SetParameter(DEVINFO_TYPE, DEVINFO_STR_ATTR_LEN,
+                                 (void*)DevicesName[DEVICE_TYPE]);
 
             // Display device address
             // Need static so string persists until printed in idle thread.
@@ -1125,6 +1131,9 @@ static void ProjectZero_processGapMessage(gapEventHdr_t *pMsg)
     default:
         break;
     }
+
+    // Call specific device handler
+    CustomDevice_processGapMessage(gapMsg);
 }
 
 void ProjectZero_processHCIMsg(ICall_HciExtEvt *pEvt)
