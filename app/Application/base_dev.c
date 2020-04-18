@@ -87,6 +87,9 @@
 #include <base_dev.h>
 
 #include "dev_if.h"
+//#include <inc/hw_ccfg.h>
+#include <inc/hw_fcfg1.h>
+
 /*********************************************************************
  * MACROS
  */
@@ -976,29 +979,16 @@ static void BaseDevice_processGapMessage(gapEventHdr_t *pMsg)
 
         if(pPkt->hdr.status == SUCCESS)
         {
-            // Store the system ID
-            uint8_t systemId[DEVINFO_SYSTEM_ID_LEN];
+            // Access BLE address from fcfg memory
+            uint64_t bleAddress = *((uint64_t *)
+                    (FCFG1_BASE + FCFG1_O_MAC_BLE_0)) & 0xFFFFFFFFFFFF;
 
-            // use 6 bytes of device address for 8 bytes of system ID value
-            systemId[0] = pPkt->devAddr[0];
-            systemId[1] = pPkt->devAddr[1];
-            systemId[2] = pPkt->devAddr[2];
-
-            // set middle bytes to zero
-            systemId[4] = 0x00;
-            systemId[3] = 0x00;
-
-            // shift three bytes up
-            systemId[7] = pPkt->devAddr[5];
-            systemId[6] = pPkt->devAddr[4];
-            systemId[5] = pPkt->devAddr[3];
-
-            // Set Device Info Service Parameter
+            // Set Bluetooth address as System Id Info Service Parameter
             DevInfo_SetParameter(DEVINFO_SYSTEM_ID, DEVINFO_SYSTEM_ID_LEN,
-                                 systemId);
+                                 (void*)&bleAddress);
 
             // Set Device Type Info Service Parameter
-            DevInfo_SetParameter(DEVINFO_TYPE, DEVINFO_STR_ATTR_LEN,
+            DevInfo_SetParameter(DEVINFO_TYPE, sizeof(DevicesName[DEVICE_TYPE]),
                                  (void*)DevicesName[DEVICE_TYPE]);
 
             // Display device address

@@ -62,13 +62,12 @@ extern "C"
  */
 
 // Device Information Service Parameters
-#define DEVINFO_SERIAL_NUMBER             0
+#define DEVINFO_SYSTEM_ID                 0
 #define DEVINFO_SOFTWARE_REV              1
 #define DEVINFO_TYPE                      2
-#define DEVINFO_SYSTEM_ID                 3
-#define DEVINFO_MODEL_NUMBER              4
-#define DEVINFO_FIRMWARE_REV              5
-#define DEVINFO_HARDWARE_REV              6
+#define DEVINFO_MODEL_NUMBER              3
+#define DEVINFO_FIRMWARE_REV              4
+#define DEVINFO_HARDWARE_REV              5
 
 // IEEE 11073 authoritative body values
 #define DEVINFO_11073_BODY_EMPTY          0

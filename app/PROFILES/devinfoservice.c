@@ -76,11 +76,10 @@ CONST uint8 devInfoServUUID[ATT_BT_UUID_SIZE] =
   LO_UINT16(DEVINFO_SERV_UUID), HI_UINT16(DEVINFO_SERV_UUID)
 };
 
-
-// Serial Number String
-CONST uint8 devInfoSerialNumberUUID[ATT_BT_UUID_SIZE] =
+// System ID
+CONST uint8 devInfoSystemIdUUID[ATT_BT_UUID_SIZE] =
 {
-  LO_UINT16(SERIAL_NUMBER_UUID), HI_UINT16(SERIAL_NUMBER_UUID)
+  LO_UINT16(SYSTEM_ID_UUID), HI_UINT16(SYSTEM_ID_UUID)
 };
 // Software Revision String
 CONST uint8 devInfoSoftwareRevUUID[ATT_BT_UUID_SIZE] =
@@ -93,10 +92,10 @@ CONST uint8 devInfoTypeUUID[ATT_BT_UUID_SIZE] =
   LO_UINT16(DEVICE_TYPE_UUID), HI_UINT16(DEVICE_TYPE_UUID)
 };
 #ifdef PORTING_COMPLETED
-// System ID
-CONST uint8 devInfoSystemIdUUID[ATT_BT_UUID_SIZE] =
+// Serial Number String
+CONST uint8 devInfoSerialNumberUUID[ATT_BT_UUID_SIZE] =
 {
-  LO_UINT16(SYSTEM_ID_UUID), HI_UINT16(SYSTEM_ID_UUID)
+  LO_UINT16(SERIAL_NUMBER_UUID), HI_UINT16(SERIAL_NUMBER_UUID)
 };
 
 // Model Number String
@@ -139,9 +138,9 @@ extern void* memcpy(void *dest, const void *src, size_t len);
 // Device Information Service attribute
 static CONST gattAttrType_t devInfoService = { ATT_BT_UUID_SIZE, devInfoServUUID };
 
-// Serial Number String characteristic
-static uint8 devInfoSerialNumberProps = GATT_PROP_READ;
-static uint8 devInfoSerialNumber[DEVINFO_STR_ATTR_LEN+1] = "Serial Number";
+// System ID characteristic
+static uint8 devInfoSystemIdProps = GATT_PROP_READ;
+static uint8 devInfoSystemId[DEVINFO_SYSTEM_ID_LEN] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 // Software Revision String characteristic
 static uint8 devInfoSoftwareRevProps = GATT_PROP_READ;
@@ -151,9 +150,9 @@ static uint8 devInfoSoftwareRev[DEVINFO_STR_ATTR_LEN+1] = "Software Revision";
 static uint8 devInfoTypeProps = GATT_PROP_READ;
 static uint8 devInfoType[DEVINFO_STR_ATTR_LEN+1] = "Base Type";
 #if PORTING_COMPLETED
-// System ID characteristic
-static uint8 devInfoSystemIdProps = GATT_PROP_READ;
-static uint8 devInfoSystemId[DEVINFO_SYSTEM_ID_LEN] = {0, 0, 0, 0, 0, 0, 0, 0};
+// Serial Number String characteristic
+static uint8 devInfoSerialNumberProps = GATT_PROP_READ;
+static uint8 devInfoSerialNumber[DEVINFO_STR_ATTR_LEN+1] = "Serial Number";
 
 // Model Number String characteristic
 static uint8 devInfoModelNumberProps = GATT_PROP_READ;
@@ -182,20 +181,20 @@ static gattAttribute_t devInfoAttrTbl[] =
     (uint8 *)&devInfoService                  /* pValue */
   },
 
-    // Serial Number String Declaration
+    // System ID Declaration
     {
       { ATT_BT_UUID_SIZE, characterUUID },
       GATT_PERMIT_READ,
       0,
-      &devInfoSerialNumberProps
+      &devInfoSystemIdProps
     },
 
-      // Serial Number Value
+      // System ID Value
       {
-        { ATT_BT_UUID_SIZE, devInfoSerialNumberUUID },
+        { ATT_BT_UUID_SIZE, devInfoSystemIdUUID },
         GATT_PERMIT_READ,
         0,
-        (uint8 *) devInfoSerialNumber
+        (uint8 *) devInfoSystemId
       },
 
     // Device Type Declaration
@@ -215,20 +214,20 @@ static gattAttribute_t devInfoAttrTbl[] =
       },
 
 #if PORTING_COMPLETED
-    // System ID Declaration
+    // Serial Number String Declaration
     {
       { ATT_BT_UUID_SIZE, characterUUID },
       GATT_PERMIT_READ,
       0,
-      &devInfoSystemIdProps
+      &
     },
 
-      // System ID Value
+      // Serial Number Value
       {
-        { ATT_BT_UUID_SIZE, devInfoSystemIdUUID },
+        { ATT_BT_UUID_SIZE, devInfoMacAddrUUID },
         GATT_PERMIT_READ,
         0,
-        (uint8 *) devInfoSystemId
+        (uint8 *)
       },
 
     // Model Number String Declaration
@@ -368,12 +367,12 @@ bStatus_t DevInfo_SetParameter( uint8 param, uint8 len, void *value )
 
   switch ( param )
   {
-    case DEVINFO_SERIAL_NUMBER:
+     case DEVINFO_SYSTEM_ID:
       // verify length, leave room for null-terminate char
-      if (len <= DEVINFO_STR_ATTR_LEN)
+      if (len == DEVINFO_SYSTEM_ID_LEN)
       {
-        memset(devInfoSerialNumber, 0, DEVINFO_STR_ATTR_LEN+1);
-        memcpy(devInfoSerialNumber, value, len);
+        memset(devInfoSystemId, 0, DEVINFO_SYSTEM_ID_LEN);
+        memcpy(devInfoSystemId, value, len);
       }
       else
       {
@@ -392,6 +391,7 @@ bStatus_t DevInfo_SetParameter( uint8 param, uint8 len, void *value )
       {
         ret = bleInvalidRange;
       }
+      break;
 
     case DEVINFO_TYPE:
       // verify length, leave room for null-terminate char
@@ -404,19 +404,9 @@ bStatus_t DevInfo_SetParameter( uint8 param, uint8 len, void *value )
       {
         ret = bleInvalidRange;
       }
+      break;
 
 #ifdef PORTING_COMPLETED
-     case DEVINFO_SYSTEM_ID:
-      // verify length
-      if (len == sizeof(devInfoSystemId))
-      {
-        memcpy(devInfoSystemId, value, len);
-      }
-      else
-      {
-        ret = bleInvalidRange;
-      }
-      break;
 
     case DEVINFO_MODEL_NUMBER:
       // verify length, leave room for null-terminate char
@@ -458,8 +448,6 @@ bStatus_t DevInfo_SetParameter( uint8 param, uint8 len, void *value )
       break;
 #endif
 
-      break;
-
     default:
       ret = INVALIDPARAMETER;
       break;
@@ -487,8 +475,8 @@ bStatus_t DevInfo_GetParameter( uint8 param, void *value )
 
   switch ( param )
   {
-    case DEVINFO_SERIAL_NUMBER:
-      memcpy(value, devInfoSerialNumber, DEVINFO_STR_ATTR_LEN);
+    case DEVINFO_SYSTEM_ID:
+      memcpy(value, devInfoSystemId, DEVINFO_SYSTEM_ID_LEN);
       break;
 
     case DEVINFO_SOFTWARE_REV:
@@ -500,10 +488,6 @@ bStatus_t DevInfo_GetParameter( uint8 param, void *value )
       break;
 
 #ifdef PORTING_COMPLETED
-  case DEVINFO_SYSTEM_ID:
-      memcpy(value, devInfoSystemId, sizeof(devInfoSystemId));
-      break;
-
     case DEVINFO_MODEL_NUMBER:
       memcpy(value, devInfoModelNumber, DEVINFO_STR_ATTR_LEN);
       break;
@@ -553,7 +537,6 @@ static bStatus_t devInfo_ReadAttrCB( uint16 connHandle, gattAttribute_t *pAttr,
   // the error code Invalid Offset.
   switch (uuid)
   {
-#ifdef PORTING_COMPLETED
     case SYSTEM_ID_UUID:
       // verify offset
       if (offset > sizeof(devInfoSystemId))
@@ -569,15 +552,14 @@ static bStatus_t devInfo_ReadAttrCB( uint16 connHandle, gattAttribute_t *pAttr,
         memcpy(pValue, &devInfoSystemId[offset], *pLen);
       }
       break;
-#endif
 
 #ifdef PORTING_COMPLETED
     case MODEL_NUMBER_UUID:
     case FIRMWARE_REV_UUID:
     case HARDWARE_REV_UUID:
     case MANUFACTURER_NAME_UUID:
-#endif
     case SERIAL_NUMBER_UUID:
+#endif
     case SOFTWARE_REV_UUID:
       {
         uint16 len = strlen((char *)(pAttr->pValue));

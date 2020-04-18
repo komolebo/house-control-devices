@@ -42,7 +42,7 @@ typedef enum DeviceType DeviceType;
 /*********************************************************************
  *  EXTERNAL VARIABLES
  */
-extern const uint8_t * DevicesName[DEVICE_COUNT];
+extern const uint8_t DevicesName[DEVICE_COUNT][DEVINFO_STR_ATTR_LEN];
 
 /*********************************************************************
  * FUNCTIONS
