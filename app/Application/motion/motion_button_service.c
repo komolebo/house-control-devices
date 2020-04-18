@@ -1,48 +1,11 @@
-/******************************************************************************
+/*
+ * motion_button_service.c
+ *
+ *  Created on: 18 квіт. 2020 р.
+ *      Author: Oleh
+ */
 
-   @file  button_service.c
-
-   @brief   This file contains the implementation of the service.
-
-   Group: CMCU, LPRF
-   Target Device: cc2640r2
-
- ******************************************************************************
-   
- Copyright (c) 2015-2020, Texas Instruments Incorporated
- All rights reserved.
-
- Redistribution and use in source and binary forms, with or without
- modification, are permitted provided that the following conditions
- are met:
-
- *  Redistributions of source code must retain the above copyright
-    notice, this list of conditions and the following disclaimer.
-
- *  Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions and the following disclaimer in the
-    documentation and/or other materials provided with the distribution.
-
- *  Neither the name of Texas Instruments Incorporated nor the names of
-    its contributors may be used to endorse or promote products derived
-    from this software without specific prior written permission.
-
- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
- CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
- EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
- ******************************************************************************
-   
-   
- *****************************************************************************/
+#ifdef MOTION_COMPILE
 
 /*********************************************************************
  * INCLUDES
@@ -57,7 +20,7 @@
 /* This Header file contains all BLE API and icall structure definition */
 #include "icall_ble_api.h"
 
-#include "button_service.h"
+#include <motion/motion_button_service.h>
 
 /*********************************************************************
  * MACROS
@@ -78,19 +41,19 @@
 // Button_Service Service UUID
 CONST uint8_t ButtonServiceUUID[ATT_UUID_SIZE] =
 {
-    BUTTON_SERVICE_SERV_UUID_BASE128(BUTTON_SERVICE_SERV_UUID)
+    BASE128_FROM_UINT16(BUTTON_SERVICE_SERV_UUID)
 };
 
 // BUTTON0 UUID
 CONST uint8_t bs_BUTTON0UUID[ATT_UUID_SIZE] =
 {
-    BS_BUTTON0_UUID_BASE128(BS_BUTTON0_UUID)
+    BASE128_FROM_UINT16(BS_BUTTON0_UUID)
 };
 
 // BUTTON1 UUID
 CONST uint8_t bs_BUTTON1UUID[ATT_UUID_SIZE] =
 {
-    BS_BUTTON1_UUID_BASE128(BS_BUTTON1_UUID)
+    BASE128_FROM_UINT16(BS_BUTTON1_UUID)
 };
 
 /*********************************************************************
@@ -563,3 +526,5 @@ static bStatus_t Button_Service_WriteAttrCB(uint16_t connHandle,
         return(ATT_ERR_ATTR_NOT_FOUND);
     }
 }
+
+#endif // MOTION_COMPILE

@@ -9,8 +9,8 @@
 /*******************************************************************************
  * INCLUDES
  */
-#include "motion.h"
-#include "common_dev.h"
+#include <motion/motion.h>
+#include <device_common.h>
 #include <icall.h>
 #include <icall_ble_api.h>
 

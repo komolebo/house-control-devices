@@ -7,9 +7,10 @@
 
 #ifndef APPLICATION_MOTION_H_
 #define APPLICATION_MOTION_H_
+
 #if MOTION_COMPILE
 
-#include "common_dev.h"
+#include <device_common.h>
 
 
 

@@ -5,7 +5,7 @@
  *      Author: Oleh
  */
 
-#include "common_dev.h"
+#include <device_common.h>
 
 const uint8_t DevicesName[DEVICE_COUNT][DEVINFO_STR_ATTR_LEN] =
 {

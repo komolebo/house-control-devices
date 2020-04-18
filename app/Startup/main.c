@@ -47,8 +47,7 @@
 /*******************************************************************************
  * INCLUDES
  */
-#include <base_dev.h>
-#include "devices/motion.h"
+#include <base_device.h>
 #include <stdint.h>
 
 #include <xdc/runtime/Error.h>
@@ -64,6 +63,7 @@
 #include <uartlog/UartLog.h> // Comment out to use xdc Log.
 
 #include <icall.h>
+#include <motion/motion.h>
 #include "hal_assert.h"
 #include "bcomdef.h"
 

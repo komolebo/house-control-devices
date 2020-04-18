@@ -5,8 +5,8 @@
  *      Author: Oleh
  */
 
-#ifndef APPLICATION_COMMON_DEV_H_
-#define APPLICATION_COMMON_DEV_H_
+#ifndef APPLICATION_DEVICE_COMMON_H_
+#define APPLICATION_DEVICE_COMMON_H_
 
 #include <stdint.h>
 #include <bcomdef.h>
@@ -50,4 +50,4 @@ extern const uint8_t DevicesName[DEVICE_COUNT][DEVINFO_STR_ATTR_LEN];
 
 
 
-#endif /* APPLICATION_COMMON_DEV_H_ */
+#endif /* APPLICATION_DEVICE_COMMON_H_ */

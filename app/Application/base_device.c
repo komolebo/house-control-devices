@@ -75,20 +75,18 @@
 
 /* Bluetooth Profiles */
 #include <devinfoservice.h>
-#include <services/button_service.h>
-#include <services/led_service.h>
-#include <services/data_service.h>
 
 /* Application specific includes */
 #include <Board.h>
 
-#include <base_dev.h>
+#include <base_device.h>
 #include <util.h>
-#include <base_dev.h>
+#include <base_device.h>
 
-#include "dev_if.h"
+#include <custom_device_if.h>
 //#include <inc/hw_ccfg.h>
 #include <inc/hw_fcfg1.h>
+#include <profiles_if.h>
 
 /*********************************************************************
  * MACROS
@@ -284,7 +282,7 @@ static uint8_t scanRspData[] =
     // in this peripheral
     (ATT_UUID_SIZE + 0x01),   // length of this data, LED service UUID + header
     GAP_ADTYPE_128BIT_MORE,   // some of the UUID's, but not all
-    LED_SERVICE_SERV_UUID_BASE128(LED_SERVICE_SERV_UUID),
+    BASE128_FROM_UINT16(LED_SERVICE_SERV_UUID),
 };
 
 // Advertising handles

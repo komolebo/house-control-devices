@@ -1,52 +1,16 @@
-/******************************************************************************
+/*
+ * motion_led_service.c
+ *
+ *  Created on: 18 квіт. 2020 р.
+ *      Author: Oleh
+ */
 
-   @file  led_service.c
-
-   @brief   This file contains the implementation of the service.
-
-   Group: CMCU, LPRF
-   Target Device: cc2640r2
-
- ******************************************************************************
-   
- Copyright (c) 2015-2020, Texas Instruments Incorporated
- All rights reserved.
-
- Redistribution and use in source and binary forms, with or without
- modification, are permitted provided that the following conditions
- are met:
-
- *  Redistributions of source code must retain the above copyright
-    notice, this list of conditions and the following disclaimer.
-
- *  Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions and the following disclaimer in the
-    documentation and/or other materials provided with the distribution.
-
- *  Neither the name of Texas Instruments Incorporated nor the names of
-    its contributors may be used to endorse or promote products derived
-    from this software without specific prior written permission.
-
- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
- CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
- EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
- ******************************************************************************
-   
-   
- *****************************************************************************/
 
 /*********************************************************************
  * INCLUDES
  */
+#ifdef MOTION_COMPILE
+
 #include <string.h>
 
 //#include <xdc/runtime/Log.h> // Comment this in to use xdc.runtime.Log
@@ -57,7 +21,7 @@
 /* This Header file contains all BLE API and icall structure definition */
 #include "icall_ble_api.h"
 
-#include "led_service.h"
+#include <motion/motion_led_service.h>
 
 /*********************************************************************
  * MACROS
@@ -78,19 +42,19 @@
 // LED_Service Service UUID
 CONST uint8_t LedServiceUUID[ATT_UUID_SIZE] =
 {
-    LED_SERVICE_SERV_UUID_BASE128(LED_SERVICE_SERV_UUID)
+    BASE128_FROM_UINT16(LED_SERVICE_SERV_UUID)
 };
 
 // LED0 UUID
 CONST uint8_t ls_LED0UUID[ATT_UUID_SIZE] =
 {
-    LS_LED0_UUID_BASE128(LS_LED0_UUID)
+    BASE128_FROM_UINT16(LS_LED0_UUID)
 };
 
 // LED1 UUID
 CONST uint8_t ls_LED1UUID[ATT_UUID_SIZE] =
 {
-    LS_LED1_UUID_BASE128(LS_LED1_UUID)
+    BASE128_FROM_UINT16(LS_LED1_UUID)
 };
 
 /*********************************************************************
@@ -565,3 +529,5 @@ static bStatus_t LED_Service_WriteAttrCB(uint16_t connHandle,
     }
     return(status);
 }
+
+#endif // MOTION_COMPILE
