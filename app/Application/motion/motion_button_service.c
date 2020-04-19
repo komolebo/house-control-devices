@@ -108,48 +108,48 @@ static gattAttribute_t Button_ServiceAttrTbl[] =
         0,
         (uint8_t *)&ButtonServiceDecl
     },
-    // BUTTON0 Characteristic Declaration
-    {
-        { ATT_BT_UUID_SIZE, characterUUID },
-        GATT_PERMIT_READ,
-        0,
-        &bs_BUTTON0Props
-    },
-    // BUTTON0 Characteristic Value
-    {
-        { ATT_UUID_SIZE, bs_BUTTON0UUID },
-        GATT_PERMIT_READ,
-        0,
-        bs_BUTTON0Val
-    },
-    // BUTTON0 CCCD
-    {
-        { ATT_BT_UUID_SIZE, clientCharCfgUUID },
-        GATT_PERMIT_READ | GATT_PERMIT_WRITE,
-        0,
-        (uint8_t *)&bs_BUTTON0Config
-    },
-    // BUTTON1 Characteristic Declaration
-    {
-        { ATT_BT_UUID_SIZE, characterUUID },
-        GATT_PERMIT_READ,
-        0,
-        &bs_BUTTON1Props
-    },
-    // BUTTON1 Characteristic Value
-    {
-        { ATT_UUID_SIZE, bs_BUTTON1UUID },
-        GATT_PERMIT_READ,
-        0,
-        bs_BUTTON1Val
-    },
-    // BUTTON1 CCCD
-    {
-        { ATT_BT_UUID_SIZE, clientCharCfgUUID },
-        GATT_PERMIT_READ | GATT_PERMIT_WRITE,
-        0,
-        (uint8_t *)&bs_BUTTON1Config
-    },
+        // BUTTON0 Characteristic Declaration
+        {
+            { ATT_BT_UUID_SIZE, characterUUID },
+            GATT_PERMIT_READ,
+            0,
+            &bs_BUTTON0Props
+        },
+            // BUTTON0 Characteristic Value
+            {
+                { ATT_UUID_SIZE, bs_BUTTON0UUID },
+                GATT_PERMIT_READ,
+                0,
+                bs_BUTTON0Val
+            },
+            // BUTTON0 CCCD
+            {
+                { ATT_BT_UUID_SIZE, clientCharCfgUUID },
+                GATT_PERMIT_READ | GATT_PERMIT_WRITE,
+                0,
+                (uint8_t *)&bs_BUTTON0Config
+            },
+        // BUTTON1 Characteristic Declaration
+        {
+            { ATT_BT_UUID_SIZE, characterUUID },
+            GATT_PERMIT_READ,
+            0,
+            &bs_BUTTON1Props
+        },
+            // BUTTON1 Characteristic Value
+            {
+                { ATT_UUID_SIZE, bs_BUTTON1UUID },
+                GATT_PERMIT_READ,
+                0,
+                bs_BUTTON1Val
+            },
+            // BUTTON1 CCCD
+            {
+                { ATT_BT_UUID_SIZE, clientCharCfgUUID },
+                GATT_PERMIT_READ | GATT_PERMIT_WRITE,
+                0,
+                (uint8_t *)&bs_BUTTON1Config
+            },
 };
 
 /*********************************************************************
@@ -214,6 +214,7 @@ extern bStatus_t ButtonService_AddService(uint8_t rspTaskId)
 
     // Initialize Client Characteristic Configuration attributes
     GATTServApp_InitCharCfg(CONNHANDLE_INVALID, bs_BUTTON1Config);
+
     // Register GATT attribute list and CBs with GATT Server App
     status = GATTServApp_RegisterService(Button_ServiceAttrTbl,
                                          GATT_NUM_ATTRS(Button_ServiceAttrTbl),
@@ -306,7 +307,7 @@ bStatus_t ButtonService_SetParameter(uint8_t param, uint16_t len, void *value)
 
         if(sendNotiInd)
         {
-            Log_info2("Trying to send noti/ind: connHandle %x, %s",
+            Log_info2("Trying to send noti/ind: connHandle 0x%x, %s",
                       attrConfig[0].connHandle,
                       (uintptr_t)((attrConfig[0].value ==
                                    0) ? "\x1b[33mNoti/ind disabled\x1b[0m" :

@@ -11,6 +11,7 @@
 /* include here device headers: */
 #include <motion/motion.h>
 #include <motion/motion_button_service.h>
+#include <motion/motion_config_service.h>
 #include <motion/motion_data_service.h>
 #include <motion/motion_led_service.h>
 
@@ -34,9 +35,9 @@ extern const DeviceType DEVICE_TYPE;
  */
 
 /*********************************************************************
- * FUNCTIONS
+ * EXTERNAL FUNCTIONS
  */
-void CustomDevice_processGapMessage(uint8_t gap_msg);
-
+extern void CustomDevice_processGapMessage(uint8_t gap_msg);
+extern void CustomDevice_init();
 
 #endif /* APPLICATION_CUSTOM_DEVICE_IF_H_ */

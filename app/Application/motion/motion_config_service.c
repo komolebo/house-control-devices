@@ -20,7 +20,7 @@
 /* This Header file contains all BLE API and icall structure definition */
 #include "icall_ble_api.h"
 
-#include <motion/motion_data_service.h>
+#include <motion/motion_config_service.h>
 
 /*********************************************************************
  * MACROS
@@ -38,64 +38,61 @@
  * GLOBAL VARIABLES
  */
 
-// Data_Service Service UUID
-CONST uint8_t DataServiceUUID[ATT_UUID_SIZE] =
+// Config_Service Service UUID
+CONST uint8_t ConfigServiceUUID[ATT_UUID_SIZE] =
 {
-    BASE128_FROM_UINT16(DATA_SERVICE_SERV_UUID)
+    BASE128_FROM_UINT16(CONFIG_SERVICE_SERV_UUID)
 };
 
-// String UUID
-CONST uint8_t ds_StringUUID[ATT_UUID_SIZE] =
+// Config state UUID
+CONST uint8_t cs_StateUUID[ATT_UUID_SIZE] =
 {
-    BASE128_FROM_UINT16(DS_STRING_UUID)
+    BASE128_FROM_UINT16(CS_STATE_ID)
 };
 
-// Stream UUID
-CONST uint8_t ds_StreamUUID[ATT_UUID_SIZE] =
+// Config mode UUID
+CONST uint8_t cs_ModeUUID[ATT_UUID_SIZE] =
 {
-    BASE128_FROM_UINT16(DS_STREAM_UUID)
+    BASE128_FROM_UINT16(ÑS_MODE_UUID)
 };
 
 /*********************************************************************
  * LOCAL VARIABLES
  */
 
-static DataServiceCBs_t *pAppCBs = NULL;
-static uint8_t ds_icall_rsp_task_id = INVALID_TASK_ID;
+static ConfigServiceCBs_t *pAppCBs = NULL;
+static uint8_t cs_icall_rsp_task_id = INVALID_TASK_ID;
 
 /*********************************************************************
  * Profile Attributes - variables
  */
 
 // Service declaration
-static CONST gattAttrType_t DataServiceDecl = { ATT_UUID_SIZE, DataServiceUUID };
+static CONST gattAttrType_t DataServiceDecl = { ATT_UUID_SIZE, ConfigServiceUUID };
 
-// Characteristic "String" Properties (for declaration)
-static uint8_t ds_StringProps = GATT_PROP_READ | GATT_PROP_WRITE;
+// Characteristic "State" Properties (for declaration)
+static uint8_t cs_StateProps = GATT_PROP_READ | GATT_PROP_WRITE;
 
-// Characteristic "String" Value variable
-static uint8_t ds_StringVal[DS_STRING_LEN] = {0};
+// Characteristic "State" Value variable
+static uint8_t cs_StateVal[CS_STATE_LEN] = { 0 };
 
-// Length of data in characteristic "String" Value variable, initialized to minimal size.
-static uint16_t ds_StringValLen = DS_STRING_LEN_MIN;
+// Length of data in characteristic "State" Value variable
+static uint16_t cs_StateValLen = CS_STATE_LEN;
 
-// Characteristic "Stream" Properties (for declaration)
-static uint8_t ds_StreamProps = GATT_PROP_NOTIFY | GATT_PROP_WRITE_NO_RSP;
+// Characteristic "Mode" Properties (for declaration)
+static uint8_t cs_ModeProps = GATT_PROP_READ | GATT_PROP_WRITE;
 
-// Characteristic "Stream" Value variable
-static uint8_t ds_StreamVal[DS_STREAM_LEN] = {0};
+// Characteristic "Mode" Value variable
+static uint8_t cs_ModeVal[CS_MODE_LEN] = { 0 };
 
-// Length of data in characteristic "Stream" Value variable, initialized to minimal size.
-static uint16_t ds_StreamValLen = DS_STREAM_LEN_MIN;
-
-// Characteristic "Stream" Client Characteristic Configuration Descriptor
-static gattCharCfg_t *ds_StreamConfig;
+// Length of data in characteristic "Mode" Value variable
+static uint16_t cs_ModeValLen = CS_MODE_LEN;
 
 /*********************************************************************
  * Profile Attributes - Table
  */
 
-static gattAttribute_t Data_ServiceAttrTbl[] =
+static gattAttribute_t Config_ServiceAttrTbl[] =
 {
     // Data_Service Service Declaration
     {
@@ -104,54 +101,47 @@ static gattAttribute_t Data_ServiceAttrTbl[] =
         0,
         (uint8_t *)&DataServiceDecl
     },
-    // String Characteristic Declaration
-    {
-        { ATT_BT_UUID_SIZE, characterUUID },
-        GATT_PERMIT_READ,
-        0,
-        &ds_StringProps
-    },
-    // String Characteristic Value
-    {
-        { ATT_UUID_SIZE, ds_StringUUID },
-        GATT_PERMIT_READ | GATT_PERMIT_WRITE,
-        0,
-        ds_StringVal
-    },
-    // Stream Characteristic Declaration
-    {
-        { ATT_BT_UUID_SIZE, characterUUID },
-        GATT_PERMIT_READ,
-        0,
-        &ds_StreamProps
-    },
-    // Stream Characteristic Value
-    {
-        { ATT_UUID_SIZE, ds_StreamUUID },
-        GATT_PERMIT_WRITE,
-        0,
-        ds_StreamVal
-    },
-    // Stream CCCD
-    {
-        { ATT_BT_UUID_SIZE, clientCharCfgUUID },
-        GATT_PERMIT_READ | GATT_PERMIT_WRITE,
-        0,
-        (uint8_t *)&ds_StreamConfig
-    },
+        // State Characteristic Declaration
+        {
+            { ATT_BT_UUID_SIZE, characterUUID },
+            GATT_PERMIT_READ,
+            0,
+            &cs_StateProps
+        },
+            // Characteristic Value
+            {
+                { ATT_UUID_SIZE, cs_StateUUID },
+                GATT_PERMIT_READ | GATT_PERMIT_WRITE,
+                0,
+                cs_StateVal
+            },
+        // Mode Characteristic Declaration
+        {
+            { ATT_BT_UUID_SIZE, characterUUID },
+            GATT_PERMIT_READ,
+            0,
+            &cs_ModeProps
+        },
+            // Stream Characteristic Value
+            {
+                { ATT_UUID_SIZE, cs_ModeUUID },
+                GATT_PERMIT_READ | GATT_PERMIT_WRITE,
+                0,
+                cs_ModeVal
+            },
 };
 
 /*********************************************************************
  * LOCAL FUNCTIONS
  */
-static bStatus_t Data_Service_ReadAttrCB(uint16_t connHandle,
+static bStatus_t Config_Service_ReadAttrCB(uint16_t connHandle,
                                          gattAttribute_t *pAttr,
                                          uint8_t *pValue,
                                          uint16_t *pLen,
                                          uint16_t offset,
                                          uint16_t maxLen,
                                          uint8_t method);
-static bStatus_t Data_Service_WriteAttrCB(uint16_t connHandle,
+static bStatus_t Config_Service_WriteAttrCB(uint16_t connHandle,
                                           gattAttribute_t *pAttr,
                                           uint8_t *pValue,
                                           uint16_t len,
@@ -162,10 +152,10 @@ static bStatus_t Data_Service_WriteAttrCB(uint16_t connHandle,
  * PROFILE CALLBACKS
  */
 // Simple Profile Service Callbacks
-CONST gattServiceCBs_t Data_ServiceCBs =
+CONST gattServiceCBs_t Config_ServiceCBs =
 {
-    Data_Service_ReadAttrCB, // Read callback function pointer
-    Data_Service_WriteAttrCB, // Write callback function pointer
+    Config_Service_ReadAttrCB, // Read callback function pointer
+    Config_Service_WriteAttrCB, // Write callback function pointer
     NULL                     // Authorization callback function pointer
 };
 
@@ -174,44 +164,46 @@ CONST gattServiceCBs_t Data_ServiceCBs =
  */
 
 /*
- * DataService_AddService- Initializes the DataService service by registering
+ * ConfigService_AddService- Initializes the DataService service by registering
  *          GATT attributes with the GATT server.
  *
  *    rspTaskId - The ICall Task Id that should receive responses for Indications.
  */
-extern bStatus_t DataService_AddService(uint8_t rspTaskId)
+extern bStatus_t ConfigService_AddService(uint8_t rspTaskId)
 {
     uint8_t status;
-
+#if 0
     // Allocate Client Characteristic Configuration table
-    ds_StreamConfig = (gattCharCfg_t *)ICall_malloc(
+    cs_StateConfig = (gattCharCfg_t *)ICall_malloc(
         sizeof(gattCharCfg_t) * linkDBNumConns);
-    if(ds_StreamConfig == NULL)
+    if(cs_StateConfig == NULL)
     {
         return(bleMemAllocError);
     }
-
     // Initialize Client Characteristic Configuration attributes
-    GATTServApp_InitCharCfg(CONNHANDLE_INVALID, ds_StreamConfig);
+    GATTServApp_InitCharCfg(CONNHANDLE_INVALID, cs_StateConfig);
+#endif
+
     // Register GATT attribute list and CBs with GATT Server App
-    status = GATTServApp_RegisterService(Data_ServiceAttrTbl,
-                                         GATT_NUM_ATTRS(Data_ServiceAttrTbl),
+    status = GATTServApp_RegisterService(Config_ServiceAttrTbl,
+                                         GATT_NUM_ATTRS(Config_ServiceAttrTbl),
                                          GATT_MAX_ENCRYPT_KEY_SIZE,
-                                         &Data_ServiceCBs);
+                                         &Config_ServiceCBs);
+
     Log_info1("Registered service, %d attributes",
-              GATT_NUM_ATTRS(Data_ServiceAttrTbl));
-    ds_icall_rsp_task_id = rspTaskId;
+              GATT_NUM_ATTRS(Config_ServiceAttrTbl));
+    cs_icall_rsp_task_id = rspTaskId;
 
     return(status);
 }
 
 /*
- * DataService_RegisterAppCBs - Registers the application callback function.
+ * ConfigService_RegisterAppCBs - Registers the application callback function.
  *                    Only call this function once.
  *
  *    appCallbacks - pointer to application callbacks.
  */
-bStatus_t DataService_RegisterAppCBs(DataServiceCBs_t *appCallbacks)
+bStatus_t ConfigService_RegisterAppCBs(ConfigServiceCBs_t *appCallbacks)
 {
     if(appCallbacks)
     {
@@ -228,7 +220,7 @@ bStatus_t DataService_RegisterAppCBs(DataServiceCBs_t *appCallbacks)
 }
 
 /*
- * DataService_SetParameter - Set a DataService parameter.
+ * ConfigService_SetParameter - Set a DataService parameter.
  *
  *    param - Profile parameter ID
  *    len   - length of data to write
@@ -237,36 +229,35 @@ bStatus_t DataService_RegisterAppCBs(DataServiceCBs_t *appCallbacks)
  *            data type (example: data type of uint16_t will be cast to
  *            uint16_t pointer).
  */
-bStatus_t DataService_SetParameter(uint8_t param, uint16_t len, void *value)
+bStatus_t ConfigService_SetParameter(uint8_t param, uint16_t len, void *value)
 {
     bStatus_t ret = SUCCESS;
     uint8_t  *pAttrVal;
     uint16_t *pValLen;
-    uint16_t valMinLen;
-    uint16_t valMaxLen;
+    uint16_t valLen;
     uint8_t sendNotiInd = FALSE;
     gattCharCfg_t *attrConfig;
     uint8_t needAuth;
 
     switch(param)
     {
-    case DS_STRING_ID:
-        pAttrVal = ds_StringVal;
-        pValLen = &ds_StringValLen;
-        valMinLen = DS_STRING_LEN_MIN;
-        valMaxLen = DS_STRING_LEN;
-        Log_info2("SetParameter : %s len: %d", (uintptr_t)"String", len);
+    case CS_STATE_ID:
+        pAttrVal = cs_StateVal;
+        pValLen = &cs_StateValLen;
+        valLen = CS_STATE_LEN;
+        sendNotiInd = TRUE;
+        needAuth = FALSE;  // Change if authenticated link is required for sending.
+        Log_info2("SetParameter : %s len: %d", (uintptr_t)"State", len);
         break;
 
-    case DS_STREAM_ID:
-        pAttrVal = ds_StreamVal;
-        pValLen = &ds_StreamValLen;
-        valMinLen = DS_STREAM_LEN_MIN;
-        valMaxLen = DS_STREAM_LEN;
+    case CS_MODE_ID:
+        attrConfig = NULL;
+        pAttrVal = cs_ModeVal;
+        pValLen = &cs_ModeValLen;
+        valLen = CS_MODE_LEN;
         sendNotiInd = TRUE;
-        attrConfig = ds_StreamConfig;
         needAuth = FALSE;  // Change if authenticated link is required for sending.
-        Log_info2("SetParameter : %s len: %d", (uintptr_t)"Stream", len);
+        Log_info2("SetParameter : %s len: %d", (uintptr_t)"Mode", len);
         break;
 
     default:
@@ -275,7 +266,7 @@ bStatus_t DataService_SetParameter(uint8_t param, uint16_t len, void *value)
     }
 
     // Check bounds, update value and send notification or indication if possible.
-    if(len <= valMaxLen && len >= valMinLen)
+    if(len == valLen)
     {
         memcpy(pAttrVal, value, len);
         *pValLen = len; // Update length for read and get.
@@ -291,18 +282,16 @@ bStatus_t DataService_SetParameter(uint8_t param, uint16_t len, void *value)
                                   "Indication enabled"));
             // Try to send notification.
             GATTServApp_ProcessCharCfg(attrConfig, pAttrVal, needAuth,
-                                       Data_ServiceAttrTbl,
+                                       Config_ServiceAttrTbl,
                                        GATT_NUM_ATTRS(
-                                           Data_ServiceAttrTbl),
-                                       ds_icall_rsp_task_id,
-                                       Data_Service_ReadAttrCB);
+                                           Config_ServiceAttrTbl),
+                                       cs_icall_rsp_task_id,
+                                       Config_Service_ReadAttrCB);
         }
     }
     else
     {
-        Log_error3("Length outside bounds: Len: %d MinLen: %d MaxLen: %d.", len,
-                   valMinLen,
-                   valMaxLen);
+        Log_error2("Length mismatch: Len: %d, expected len: %d.", len, valLen);
         ret = bleInvalidRange;
     }
 
@@ -310,7 +299,7 @@ bStatus_t DataService_SetParameter(uint8_t param, uint16_t len, void *value)
 }
 
 /*
- * DataService_GetParameter - Get a DataService parameter.
+ * ConfigService_GetParameter - Get a DataService parameter.
  *
  *    param - Profile parameter ID
  *    len   - pointer to a variable that contains the maximum length that can be written to *value.
@@ -320,23 +309,21 @@ bStatus_t DataService_SetParameter(uint8_t param, uint16_t len, void *value)
  *            data type (example: data type of uint16_t will be cast to
  *            uint16_t pointer).
  */
-bStatus_t DataService_GetParameter(uint8_t param, uint16_t *len, void *value)
+bStatus_t ConfigService_GetParameter(uint8_t param, uint16_t *len, void *value)
 {
     bStatus_t ret = SUCCESS;
     switch(param)
     {
-    case DS_STRING_ID:
-        *len = MIN(*len, ds_StringValLen);
-        memcpy(value, ds_StringVal, *len);
-        Log_info2("GetParameter : %s returning %d bytes", (uintptr_t)"String",
-                  *len);
+    case CS_STATE_ID:
+        memcpy(value, cs_StateVal, *len);
+        Log_info2("GetParameter : %s returning %d ", (uintptr_t)"State",
+                  *(uint8_t*)value);
         break;
 
-    case DS_STREAM_ID:
-        *len = MIN(*len, ds_StreamValLen);
-        memcpy(value, ds_StreamVal, *len);
-        Log_info2("GetParameter : %s returning %d bytes", (uintptr_t)"Stream",
-                  *len);
+    case CS_MODE_ID:
+        memcpy(value, cs_ModeVal, *len);
+        Log_info2("GetParameter : %s returning %d", (uintptr_t)"Mode",
+                  *(uint8_t*)value);
         break;
 
     default:
@@ -349,7 +336,7 @@ bStatus_t DataService_GetParameter(uint8_t param, uint16_t *len, void *value)
 
 /*********************************************************************
  * @internal
- * @fn          Data_Service_findCharParamId
+ * @fn          Config_Service_findCharParamId
  *
  * @brief       Find the logical param id of an attribute in the service's attr table.
  *
@@ -360,25 +347,25 @@ bStatus_t DataService_GetParameter(uint8_t param, uint16_t *len, void *value)
  *
  * @return      uint8_t paramID (ref data_service.h) or 0xFF if not found.
  */
-static uint8_t Data_Service_findCharParamId(gattAttribute_t *pAttr)
+static uint8_t Config_Service_findCharParamId(gattAttribute_t *pAttr)
 {
     // Is this a Client Characteristic Configuration Descriptor?
     if(ATT_BT_UUID_SIZE == pAttr->type.len && GATT_CLIENT_CHAR_CFG_UUID ==
        *(uint16_t *)pAttr->type.uuid)
     {
-        return(Data_Service_findCharParamId(pAttr - 1)); // Assume the value attribute precedes CCCD and recurse
+        return(Config_Service_findCharParamId(pAttr - 1)); // Assume the value attribute precedes CCCD and recurse
     }
-    // Is this attribute in "String"?
+    // Is this attribute state
     else if(ATT_UUID_SIZE == pAttr->type.len &&
-            !memcmp(pAttr->type.uuid, ds_StringUUID, pAttr->type.len))
+            !memcmp(pAttr->type.uuid, cs_StateUUID, pAttr->type.len))
     {
-        return(DS_STRING_ID);
+        return(CS_STATE_ID);
     }
     // Is this attribute in "Stream"?
     else if(ATT_UUID_SIZE == pAttr->type.len &&
-            !memcmp(pAttr->type.uuid, ds_StreamUUID, pAttr->type.len))
+            !memcmp(pAttr->type.uuid, cs_ModeUUID, pAttr->type.len))
     {
-        return(DS_STREAM_ID);
+        return(CS_MODE_ID);
     }
     else
     {
@@ -387,7 +374,7 @@ static uint8_t Data_Service_findCharParamId(gattAttribute_t *pAttr)
 }
 
 /*********************************************************************
- * @fn          Data_Service_ReadAttrCB
+ * @fn          Config_Service_ReadAttrCB
  *
  * @brief       Read an attribute.
  *
@@ -401,7 +388,7 @@ static uint8_t Data_Service_findCharParamId(gattAttribute_t *pAttr)
  *
  * @return      SUCCESS, blePending or Failure
  */
-static bStatus_t Data_Service_ReadAttrCB(uint16_t connHandle,
+static bStatus_t Config_Service_ReadAttrCB(uint16_t connHandle,
                                          gattAttribute_t *pAttr,
                                          uint8_t *pValue, uint16_t *pLen,
                                          uint16_t offset,
@@ -413,25 +400,25 @@ static bStatus_t Data_Service_ReadAttrCB(uint16_t connHandle,
     uint8_t paramID = 0xFF;
 
     // Find settings for the characteristic to be read.
-    paramID = Data_Service_findCharParamId(pAttr);
+    paramID = Config_Service_findCharParamId(pAttr);
     switch(paramID)
     {
-    case DS_STRING_ID:
-        valueLen = ds_StringValLen;
+    case CS_STATE_ID:
+        valueLen = cs_StateValLen;
 
         Log_info4("ReadAttrCB : %s connHandle: %d offset: %d method: 0x%02x",
-                  (uintptr_t)"String",
+                  (uintptr_t)"State",
                   connHandle,
                   offset,
                   method);
         /* Other considerations for String can be inserted here */
         break;
 
-    case DS_STREAM_ID:
-        valueLen = ds_StreamValLen;
+    case CS_MODE_ID:
+        valueLen = cs_ModeValLen;
 
         Log_info4("ReadAttrCB : %s connHandle: %d offset: %d method: 0x%02x",
-                  (uintptr_t)"Stream",
+                  (uintptr_t)"Mode",
                   connHandle,
                   offset,
                   method);
@@ -458,7 +445,7 @@ static bStatus_t Data_Service_ReadAttrCB(uint16_t connHandle,
 }
 
 /*********************************************************************
- * @fn      Data_Service_WriteAttrCB
+ * @fn      Config_Service_WriteAttrCB
  *
  * @brief   Validate attribute data prior to a write operation
  *
@@ -471,7 +458,7 @@ static bStatus_t Data_Service_ReadAttrCB(uint16_t connHandle,
  *
  * @return  SUCCESS, blePending or Failure
  */
-static bStatus_t Data_Service_WriteAttrCB(uint16_t connHandle,
+static bStatus_t Config_Service_WriteAttrCB(uint16_t connHandle,
                                           gattAttribute_t *pAttr,
                                           uint8_t *pValue, uint16_t len,
                                           uint16_t offset,
@@ -480,8 +467,7 @@ static bStatus_t Data_Service_WriteAttrCB(uint16_t connHandle,
     bStatus_t status = SUCCESS;
     uint8_t paramID = 0xFF;
     uint8_t changeParamID = 0xFF;
-    uint16_t writeLenMin;
-    uint16_t writeLenMax;
+    uint16_t writeLen;
     uint16_t *pValueLenVar;
 
     // See if request is regarding a Client Characterisic Configuration
@@ -489,7 +475,7 @@ static bStatus_t Data_Service_WriteAttrCB(uint16_t connHandle,
        *(uint16_t *)pAttr->type.uuid)
     {
         Log_info3("WriteAttrCB (CCCD): param: %d connHandle: %d %s",
-                  Data_Service_findCharParamId(pAttr),
+                  Config_Service_findCharParamId(pAttr),
                   connHandle,
                   (uintptr_t)(method ==
                               GATT_LOCAL_WRITE ? "- restoring bonded state" :
@@ -504,7 +490,7 @@ static bStatus_t Data_Service_WriteAttrCB(uint16_t connHandle,
         if(SUCCESS == status && pAppCBs && pAppCBs->pfnCfgChangeCb)
         {
             pAppCBs->pfnCfgChangeCb(connHandle,
-                                    Data_Service_findCharParamId(
+                                    Config_Service_findCharParamId(
                                         pAttr), len, pValue);
         }
 
@@ -512,13 +498,12 @@ static bStatus_t Data_Service_WriteAttrCB(uint16_t connHandle,
     }
 
     // Find settings for the characteristic to be written.
-    paramID = Data_Service_findCharParamId(pAttr);
+    paramID = Config_Service_findCharParamId(pAttr);
     switch(paramID)
     {
-    case DS_STRING_ID:
-        writeLenMin = DS_STRING_LEN_MIN;
-        writeLenMax = DS_STRING_LEN;
-        pValueLenVar = &ds_StringValLen;
+    case CS_STATE_ID:
+        writeLen = CS_STATE_LEN;
+        pValueLenVar = &cs_StateValLen;
 
         Log_info5(
             "WriteAttrCB : %s connHandle(%d) len(%d) offset(%d) method(0x%02x)",
@@ -530,10 +515,9 @@ static bStatus_t Data_Service_WriteAttrCB(uint16_t connHandle,
         /* Other considerations for String can be inserted here */
         break;
 
-    case DS_STREAM_ID:
-        writeLenMin = DS_STREAM_LEN_MIN;
-        writeLenMax = DS_STREAM_LEN;
-        pValueLenVar = &ds_StreamValLen;
+    case CS_MODE_ID:
+        writeLen = CS_MODE_LEN;
+        pValueLenVar = &cs_ModeValLen;
 
         Log_info5(
             "WriteAttrCB : %s connHandle(%d) len(%d) offset(%d) method(0x%02x)",
@@ -550,17 +534,17 @@ static bStatus_t Data_Service_WriteAttrCB(uint16_t connHandle,
         return(ATT_ERR_ATTR_NOT_FOUND);
     }
     // Check whether the length is within bounds.
-    if(offset >= writeLenMax)
+    if(offset >= writeLen)
     {
         Log_error0("An invalid offset was requested.");
         status = ATT_ERR_INVALID_OFFSET;
     }
-    else if(offset + len > writeLenMax)
+    else if(offset + len > writeLen)
     {
         Log_error0("Invalid value length was received.");
         status = ATT_ERR_INVALID_VALUE_SIZE;
     }
-    else if(offset + len < writeLenMin &&
+    else if(offset + len < writeLen &&
             (method == ATT_EXECUTE_WRITE_REQ || method == ATT_WRITE_REQ))
     {
         // Refuse writes that are lower than minimum.
@@ -581,7 +565,7 @@ static bStatus_t Data_Service_WriteAttrCB(uint16_t connHandle,
         //       the application will get a callback for every write with an offset + len larger than _LEN_MIN.
         // Note: For Long Writes (ATT Prepare + Execute towards only one attribute) only one callback will be issued,
         //       because the write fragments are concatenated before being sent here.
-        if(offset + len >= writeLenMin)
+        if(offset + len >= writeLen)
         {
             changeParamID = paramID;
             *pValueLenVar = offset + len; // Update data length.
