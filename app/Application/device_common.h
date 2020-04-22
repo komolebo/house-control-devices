@@ -17,6 +17,25 @@
 /*********************************************************************
  * CONSTANTS
  */
+#define DEVICE_STATE_ENABLED                (1)
+#define DEVICE_STATE_DISABLED               (0)
+
+#define MOTION_SENSITIVITY_3M               (0)
+#define MOTION_SENSITIVITY_4M               (1)
+#define MOTION_SENSITIVITY_5M               (2)
+#define MOTION_SENSITIVITY_6M               (3)
+#define MOTION_SENSITIVITY_7M               (4)
+
+/*********************************************************************
+ * TYPEDEFS
+ */
+// Struct for message about button state
+typedef struct
+{
+    PIN_Id pinId;
+    uint8_t state;
+} ButtonState_t;
+
 
 /*********************************************************************
  * MACROS

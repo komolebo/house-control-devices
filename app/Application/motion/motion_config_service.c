@@ -21,6 +21,7 @@
 #include "icall_ble_api.h"
 
 #include <motion/motion_config_service.h>
+#include <device_common.h>
 
 /*********************************************************************
  * MACROS
@@ -47,13 +48,19 @@ CONST uint8_t ConfigServiceUUID[ATT_UUID_SIZE] =
 // Config state UUID
 CONST uint8_t cs_StateUUID[ATT_UUID_SIZE] =
 {
-    BASE128_FROM_UINT16(CS_STATE_ID)
+    BASE128_FROM_UINT16(CS_STATE_UUID)
 };
 
 // Config mode UUID
 CONST uint8_t cs_ModeUUID[ATT_UUID_SIZE] =
 {
     BASE128_FROM_UINT16(ÑS_MODE_UUID)
+};
+
+// Config sensitivity UUID
+CONST uint8_t cs_SensitivityUUID[ATT_UUID_SIZE] =
+{
+    BASE128_FROM_UINT16(ÑS_SENSITIVITY_UUID)
 };
 
 /*********************************************************************
@@ -74,7 +81,7 @@ static CONST gattAttrType_t DataServiceDecl = { ATT_UUID_SIZE, ConfigServiceUUID
 static uint8_t cs_StateProps = GATT_PROP_READ | GATT_PROP_WRITE;
 
 // Characteristic "State" Value variable
-static uint8_t cs_StateVal[CS_STATE_LEN] = { 0 };
+static uint8_t cs_StateVal[CS_STATE_LEN] = { DEVICE_STATE_ENABLED };
 
 // Length of data in characteristic "State" Value variable
 static uint16_t cs_StateValLen = CS_STATE_LEN;
@@ -87,6 +94,15 @@ static uint8_t cs_ModeVal[CS_MODE_LEN] = { 0 };
 
 // Length of data in characteristic "Mode" Value variable
 static uint16_t cs_ModeValLen = CS_MODE_LEN;
+
+// Characteristic "Sensitivity" Properties (for declaration)
+static uint8_t cs_SensitivityProps = GATT_PROP_READ | GATT_PROP_WRITE;
+
+// Characteristic "Sensitivity" Value variable
+static uint8_t cs_SensitivityVal[CS_SENSITIVITY_LEN] = { MOTION_SENSITIVITY_3M };
+
+// Length of data in characteristic "Sensitivity" Value variable
+static uint16_t cs_SensitivityValLen = CS_SENSITIVITY_LEN;
 
 /*********************************************************************
  * Profile Attributes - Table
@@ -128,6 +144,20 @@ static gattAttribute_t Config_ServiceAttrTbl[] =
                 GATT_PERMIT_READ | GATT_PERMIT_WRITE,
                 0,
                 cs_ModeVal
+            },
+        // Sensitivity Characteristic Declaration
+        {
+            { ATT_BT_UUID_SIZE, characterUUID },
+            GATT_PERMIT_READ,
+            0,
+            &cs_SensitivityProps
+        },
+            // Stream Characteristic Value
+            {
+                { ATT_UUID_SIZE, cs_SensitivityUUID },
+                GATT_PERMIT_READ | GATT_PERMIT_WRITE,
+                0,
+                cs_SensitivityVal
             },
 };
 
@@ -236,7 +266,7 @@ bStatus_t ConfigService_SetParameter(uint8_t param, uint16_t len, void *value)
     uint16_t *pValLen;
     uint16_t valLen;
     uint8_t sendNotiInd = FALSE;
-    gattCharCfg_t *attrConfig;
+    gattCharCfg_t *attrConfig = NULL;
     uint8_t needAuth;
 
     switch(param)
@@ -245,17 +275,22 @@ bStatus_t ConfigService_SetParameter(uint8_t param, uint16_t len, void *value)
         pAttrVal = cs_StateVal;
         pValLen = &cs_StateValLen;
         valLen = CS_STATE_LEN;
-        sendNotiInd = TRUE;
         needAuth = FALSE;  // Change if authenticated link is required for sending.
         Log_info2("SetParameter : %s len: %d", (uintptr_t)"State", len);
         break;
 
     case CS_MODE_ID:
-        attrConfig = NULL;
         pAttrVal = cs_ModeVal;
         pValLen = &cs_ModeValLen;
         valLen = CS_MODE_LEN;
-        sendNotiInd = TRUE;
+        needAuth = FALSE;  // Change if authenticated link is required for sending.
+        Log_info2("SetParameter : %s len: %d", (uintptr_t)"Mode", len);
+        break;
+
+    case CS_SENSITIVITY_ID:
+        pAttrVal = cs_SensitivityVal;
+        pValLen = &cs_SensitivityValLen;
+        valLen = CS_SENSITIVITY_LEN;
         needAuth = FALSE;  // Change if authenticated link is required for sending.
         Log_info2("SetParameter : %s len: %d", (uintptr_t)"Mode", len);
         break;
@@ -326,6 +361,12 @@ bStatus_t ConfigService_GetParameter(uint8_t param, uint16_t *len, void *value)
                   *(uint8_t*)value);
         break;
 
+    case CS_SENSITIVITY_ID:
+        memcpy(value, cs_SensitivityVal, *len);
+        Log_info2("GetParameter : %s returning %d", (uintptr_t)"Sensitivity",
+                  *(uint8_t*)value);
+        break;
+
     default:
         Log_error1("GetParameter: Parameter #%d not valid.", param);
         ret = INVALIDPARAMETER;
@@ -355,17 +396,23 @@ static uint8_t Config_Service_findCharParamId(gattAttribute_t *pAttr)
     {
         return(Config_Service_findCharParamId(pAttr - 1)); // Assume the value attribute precedes CCCD and recurse
     }
-    // Is this attribute state
+    // Is this attribute "State"
     else if(ATT_UUID_SIZE == pAttr->type.len &&
             !memcmp(pAttr->type.uuid, cs_StateUUID, pAttr->type.len))
     {
         return(CS_STATE_ID);
     }
-    // Is this attribute in "Stream"?
+    // Is this attribute in "Mode"?
     else if(ATT_UUID_SIZE == pAttr->type.len &&
             !memcmp(pAttr->type.uuid, cs_ModeUUID, pAttr->type.len))
     {
         return(CS_MODE_ID);
+    }
+    // Is this attribute in "Sensitivity"?
+    else if(ATT_UUID_SIZE == pAttr->type.len &&
+            !memcmp(pAttr->type.uuid, cs_SensitivityUUID, pAttr->type.len))
+    {
+        return(CS_SENSITIVITY_ID);
     }
     else
     {
@@ -419,6 +466,17 @@ static bStatus_t Config_Service_ReadAttrCB(uint16_t connHandle,
 
         Log_info4("ReadAttrCB : %s connHandle: %d offset: %d method: 0x%02x",
                   (uintptr_t)"Mode",
+                  connHandle,
+                  offset,
+                  method);
+        /* Other considerations for Stream can be inserted here */
+        break;
+
+    case CS_SENSITIVITY_ID:
+        valueLen = cs_SensitivityValLen;
+
+        Log_info4("ReadAttrCB : %s connHandle: %d offset: %d method: 0x%02x",
+                  (uintptr_t)"Sensitivity",
                   connHandle,
                   offset,
                   method);
@@ -518,6 +576,20 @@ static bStatus_t Config_Service_WriteAttrCB(uint16_t connHandle,
     case CS_MODE_ID:
         writeLen = CS_MODE_LEN;
         pValueLenVar = &cs_ModeValLen;
+
+        Log_info5(
+            "WriteAttrCB : %s connHandle(%d) len(%d) offset(%d) method(0x%02x)",
+            (uintptr_t)"Stream",
+            connHandle,
+            len,
+            offset,
+            method);
+        /* Other considerations for Stream can be inserted here */
+        break;
+
+    case CS_SENSITIVITY_ID:
+        writeLen = CS_SENSITIVITY_LEN;
+        pValueLenVar = &cs_SensitivityValLen;
 
         Log_info5(
             "WriteAttrCB : %s connHandle(%d) len(%d) offset(%d) method(0x%02x)",

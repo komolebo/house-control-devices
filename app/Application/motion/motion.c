@@ -61,7 +61,7 @@ const uint8_t * SOFTWARE_VERSION =  \
 /* Button handling functions */
 static void buttonDebounceSwiFxn(UArg buttonId);
 static void buttonCallbackFxn(PIN_Handle handle, PIN_Id pinId);
-static void handleButtonPress(pzButtonState_t *pState);
+static void handleButtonPress(ButtonState_t *pState);
 
 /* Profile value change handlers */
 static void ProjectZero_updateCharVal(CharacteristicData_t *pCharData);
@@ -286,7 +286,7 @@ void CustomDevice_bleInit(uint8_t selfEntity)
 static void buttonDebounceSwiFxn(UArg buttonId)
 {
     // Used to send message to app
-    pzButtonState_t buttonMsg = { .pinId = buttonId };
+    ButtonState_t buttonMsg = { .pinId = buttonId };
     uint8_t sendMsg = FALSE;
 
     // Get current value of the button pin after the clock timeout
@@ -344,7 +344,7 @@ static void buttonDebounceSwiFxn(UArg buttonId)
 
     if(sendMsg == TRUE)
     {
-        pzButtonState_t *pButtonState = ICall_malloc(sizeof(pzButtonState_t));
+        ButtonState_t *pButtonState = ICall_malloc(sizeof(ButtonState_t));
         if(pButtonState != NULL)
         {
             *pButtonState = buttonMsg;
@@ -871,7 +871,7 @@ void CustomDevice_processGapMessage(uint8_t gap_msg)
  *
  * @return  None.
  */
-static void handleButtonPress(pzButtonState_t *pState)
+static void handleButtonPress(ButtonState_t *pState)
 {
     Log_info2("%s %s",
               (uintptr_t)(pState->pinId ==
@@ -910,7 +910,7 @@ void CustomDevice_processApplicationMessage(Msg_t *pMsg)
 
         case PZ_BUTTON_DEBOUNCED_EVT: /* Message from swi about pin change */
         {
-            pzButtonState_t *pButtonState = (pzButtonState_t *)pMsg->pData;
+            ButtonState_t *pButtonState = (ButtonState_t *)pMsg->pData;
             handleButtonPress(pButtonState);
             break;
         }

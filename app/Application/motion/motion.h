@@ -20,12 +20,6 @@
 /*********************************************************************
  * TYPEDEFS
  */
-// Struct for message about button state
-typedef struct
-{
-    PIN_Id pinId;
-    uint8_t state;
-} pzButtonState_t;
 
 /*********************************************************************
  * MACROS

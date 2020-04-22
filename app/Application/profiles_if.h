@@ -61,15 +61,20 @@
 #define DS_STREAM_LEN                20
 #define DS_STREAM_LEN_MIN            0
 
-// Stream Characteristic defines
+// State Characteristic defines
 #define CS_STATE_ID                  0
 #define CS_STATE_UUID                0x1141
 #define CS_STATE_LEN                 1
 
-// Stream Characteristic defines
+// Mode Characteristic defines
 #define CS_MODE_ID                   1
 #define ÑS_MODE_UUID                 0x1142
 #define CS_MODE_LEN                  1
+
+// Mode Characteristic defines
+#define CS_SENSITIVITY_ID            2
+#define ÑS_SENSITIVITY_UUID          0x1143
+#define CS_SENSITIVITY_LEN           1
 
 
 /*********************************************************************
