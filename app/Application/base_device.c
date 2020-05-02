@@ -214,6 +214,49 @@ uint8_t appTaskStack[PZ_TASK_STACK_SIZE];
 /*********************************************************************
  * LOCAL VARIABLES
  */
+// Advertisement data
+static uint8_t advertData[] =
+{
+    0x02, // length of this data
+    GAP_ADTYPE_FLAGS,
+    DEFAULT_DISCOVERABLE_MODE | GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED,
+
+    // advertise supported common services
+    0x05, // length of service items data
+    GAP_ADTYPE_16BIT_MORE,
+    LO_UINT16(DATA_SERVICE_SERV_UUID),
+    HI_UINT16(DATA_SERVICE_SERV_UUID),
+    LO_UINT16(CONFIG_SERVICE_SERV_UUID),
+    HI_UINT16(CONFIG_SERVICE_SERV_UUID),
+
+    // complete name
+    ADVERT_DATA_NAME_DISPLAY_LEN, // length of this data
+    GAP_ADTYPE_LOCAL_NAME_COMPLETE,
+    ADVERT_DATA_NAME
+};
+
+// Scan Response Data
+static uint8_t scanRspData[] =
+{
+    // complete name
+    ADVERT_DATA_NAME_DISPLAY_LEN,   // data length + 1 byte of data ID
+    GAP_ADTYPE_LOCAL_NAME_COMPLETE,
+    ADVERT_DATA_NAME,
+
+    // connection interval range
+    5,   // length of this data
+    GAP_ADTYPE_SLAVE_CONN_INTERVAL_RANGE,
+    LO_UINT16(DEFAULT_DESIRED_MIN_CONN_INTERVAL),   // 100ms
+    HI_UINT16(DEFAULT_DESIRED_MIN_CONN_INTERVAL),
+    LO_UINT16(DEFAULT_DESIRED_MAX_CONN_INTERVAL),   // 1s
+    HI_UINT16(DEFAULT_DESIRED_MAX_CONN_INTERVAL),
+
+    // Tx power level
+    2,   // length of this data
+    GAP_ADTYPE_POWER_LEVEL,
+    0       // 0dBm
+};
+
 
 // Entity ID globally used to check for source and/or destination of messages
 static ICall_EntityID selfEntity;
@@ -229,15 +272,7 @@ static Queue_Handle appMsgQueueHandle;
 // GAP GATT Attributes
 static uint8_t attDeviceName[GAP_DEVICE_NAME_LEN] = "";
 
-// Scan Response Data
-static uint8_t scanRspData[] =
-{
-    // service UUID, to notify central devices what services are included
-    // in this peripheral
-    (ATT_UUID_SIZE + 0x01),   // length of this data, LED service UUID + header
-    GAP_ADTYPE_128BIT_MORE,   // some of the UUID's, but not all
-    BASE128_FROM_UINT16(LED_SERVICE_SERV_UUID),
-};
+
 
 // Advertising handles
 static uint8_t advHandleLegacy;

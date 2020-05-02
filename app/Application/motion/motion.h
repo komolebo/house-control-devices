@@ -30,9 +30,6 @@
 /*********************************************************************
  *  EXTERNAL VARIABLES
  */
-// Advertisement data
-extern uint8_t advertData[ADVERT_DATA_NAME_DISPLAY_LEN + ADVERT_DATA_HEADER_LEN];
-
 
 /*********************************************************************
  * API FUNCTIONS
