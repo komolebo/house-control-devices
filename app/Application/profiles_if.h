@@ -21,6 +21,7 @@
 #define BUTTON_SERVICE_SERV_UUID    0x1120
 #define DATA_SERVICE_SERV_UUID      0x1130
 #define CONFIG_SERVICE_SERV_UUID    0x1140
+#define TAMPER_SERVICE_SERV_UUID    0x1150
 
 /* ---------------------------------------------------------------------------
  * Characteristic UUID definitions
@@ -75,6 +76,14 @@
 #define CS_SENSITIVITY_ID            2
 #define ÑS_SENSITIVITY_UUID          0x1143
 #define CS_SENSITIVITY_LEN           1
+
+// State Characteristic defines
+#define TS_STATE_ID                  0
+#define TS_STATE_UUID                0x1151
+#define TS_STATE_LEN                 1
+
+
+#define UUID_DATA_LEN               (2) // 16bit UUID addressing
 
 
 /*********************************************************************

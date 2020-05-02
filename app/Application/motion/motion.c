@@ -14,6 +14,7 @@
 #include <services/config_service.h>
 #include <services/data_service.h>
 #include <services/led_service.h>
+#include <services/tamper_service.h>
 #include <devinfoservice.h>
 #include <device_common.h>
 #include <icall.h>
@@ -94,6 +95,10 @@ static void DataService_CfgChangeCB(uint16_t connHandle,
                                     uint8_t paramID,
                                     uint16_t len,
                                     uint8_t *pValue);
+static void TamperService_CfgChangeCB(uint16_t connHandle,
+                                      uint8_t paramID,
+                                      uint16_t len,
+                                      uint8_t *pValue);
 
 /*********************************************************************
  * VARIABLES
@@ -133,6 +138,14 @@ static ConfigServiceCBs_t Config_ServiceCBs =
 {
     .pfnChangeCb = ConfigService_ValueChangeCB,  // Characteristic value change callback handler
     .pfnCfgChangeCb = NULL, // No notification-/indication enabled chars in LED Service
+};
+
+// Tamper Service callback handler.
+// The type Tamper_ServiceCBs_t is defined in tamper_service.h
+static TamperServiceCBs_t Tamper_ServiceCBs =
+{
+    .pfnChangeCb = NULL,  // No writable chars in Tamper Service, so no change handler.
+    .pfnCfgChangeCb = TamperService_CfgChangeCB, // Noti/ind configuration callback handler
 };
 /*********************************************************************
  * LOCAL VARIABLES
@@ -236,6 +249,7 @@ void CustomDevice_bleInit(uint8_t selfEntity)
     ButtonService_AddService(selfEntity);
     DataService_AddService(selfEntity);
     ConfigService_AddService(selfEntity);
+    TamperService_AddService(selfEntity);
 
     // Register callbacks with the generated services that
     // can generate events (writes received) to the application
@@ -243,6 +257,7 @@ void CustomDevice_bleInit(uint8_t selfEntity)
     ButtonService_RegisterAppCBs(&Button_ServiceCBs);
     DataService_RegisterAppCBs(&Data_ServiceCBs);
     ConfigService_RegisterAppCBs(&Config_ServiceCBs);
+    TamperService_RegisterAppCBs(&Tamper_ServiceCBs);
 
     // Placeholder variable for characteristic intialization
     uint8_t initVal[40] = {0};
@@ -847,6 +862,42 @@ void CustomDevice_processGapMessage(uint8_t gap_msg)
     {
     default:
         break;
+    }
+}
+
+
+/*********************************************************************
+ * @fn      TamperService_CfgChangeCB
+ *
+ * @brief   Callback for when a peer enables or disables the CCCD attribute,
+ *          indicating they are interested in notifications or indications.
+ *
+ * @param   connHandle - connection handle
+ *          paramID - the parameter ID maps to the characteristic written to
+ *          len - length of the data written
+ *          pValue - pointer to the data written
+ */
+static void TamperService_CfgChangeCB(uint16_t connHandle,
+                                      uint8_t paramID, uint16_t len,
+                                      uint8_t *pValue)
+{
+    Log_info1("(CB) Tamper Svc Char config change paramID(%d). "
+              "Sending msg to app.", paramID);
+
+    CharacteristicData_t *pValChange =
+        ICall_malloc(sizeof(CharacteristicData_t) + len);
+
+    if(pValChange != NULL)
+    {
+        pValChange->svcUUID = TAMPER_SERVICE_SERV_UUID;
+        pValChange->paramID = paramID;
+        memcpy(pValChange->data, pValue, len);
+        pValChange->dataLen = len;
+
+        if(enqueueMsg(PZ_SERVICE_CFG_EVT, pValChange) != SUCCESS)
+        {
+          ICall_free(pValChange);
+        }
     }
 }
 
