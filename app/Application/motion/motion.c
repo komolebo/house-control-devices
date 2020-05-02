@@ -19,6 +19,7 @@
 #include <device_common.h>
 #include <icall.h>
 #include <icall_ble_api.h>
+#include "features/tamper.h"
 
 #include <ti/sysbios/knl/Task.h>
 #include <ti/sysbios/knl/Clock.h>
@@ -39,17 +40,19 @@
 /*********************************************************************
  * CONSTANTS
  */
-const DeviceType DEVICE_TYPE = DEVICE_MOTION;
-const uint8_t DEVICE_TYPE_NAME[] = "MOTION";
+const DeviceType DEVICE_TYPE        =  DEVICE_MOTION;
+const uint8_t DEVICE_TYPE_NAME[]    = "MOTION";
 
-#define REL_VERSION_PATCH   "0"
-#define REL_VERSION_MINOR   "1"
-#define REL_VERSION_MAJOR   "0"
+#define REL_VERSION_PATCH           "0"
+#define REL_VERSION_MINOR           "1"
+#define REL_VERSION_MAJOR           "0"
 
 const uint8_t * SOFTWARE_VERSION =  \
         REL_VERSION_MAJOR "."       \
         REL_VERSION_MINOR "."       \
         REL_VERSION_PATCH;
+
+#define TAMPER_PIN                  (Board_PIN_BUTTON0)
 
 /*********************************************************************
  * TYPEDEFS
@@ -87,10 +90,12 @@ static void ConfigService_ValueChangeCB(uint16_t connHandle,
                                         uint8_t paramID,
                                         uint16_t len,
                                         uint8_t *pValue);
+#if 0
 static void ButtonService_CfgChangeCB(uint16_t connHandle,
                                       uint8_t paramID,
                                       uint16_t len,
                                       uint8_t *pValue);
+#endif
 static void DataService_CfgChangeCB(uint16_t connHandle,
                                     uint8_t paramID,
                                     uint16_t len,
@@ -116,6 +121,7 @@ static LedServiceCBs_t LED_ServiceCBs =
     .pfnCfgChangeCb = NULL, // No notification-/indication enabled chars in LED Service
 };
 
+#if 0
 // Button Service callback handler.
 // The type Button_ServiceCBs_t is defined in button_service.h
 static ButtonServiceCBs_t Button_ServiceCBs =
@@ -123,6 +129,7 @@ static ButtonServiceCBs_t Button_ServiceCBs =
     .pfnChangeCb = NULL,  // No writable chars in Button Service, so no change handler.
     .pfnCfgChangeCb = ButtonService_CfgChangeCB, // Noti/ind configuration callback handler
 };
+#endif
 
 // Data Service callback handler.
 // The type Data_ServiceCBs_t is defined in data_service.h
@@ -173,19 +180,16 @@ PIN_Config ledPinTable[] = {
  *   - Buttons interrupts are configured to trigger on falling edge.
  */
 PIN_Config buttonPinTable[] = {
-    Board_PIN_BUTTON0 | PIN_INPUT_EN | PIN_PULLUP | PIN_IRQ_NEGEDGE,
     Board_PIN_BUTTON1 | PIN_INPUT_EN | PIN_PULLUP | PIN_IRQ_NEGEDGE,
+
     PIN_TERMINATE
 };
 
 // Clock objects for debouncing the buttons
-static Clock_Struct button0DebounceClock;
 static Clock_Struct button1DebounceClock;
-static Clock_Handle button0DebounceClockHandle;
 static Clock_Handle button1DebounceClockHandle;
 
 // State of the buttons
-static uint8_t button0State = 0;
 static uint8_t button1State = 0;
 
 
@@ -221,12 +225,8 @@ void CustomDevice_hardwareInit(void)
         Task_exit();
     }
 
-    // Create the debounce clock objects for Button 0 and Button 1
-    button0DebounceClockHandle = Util_constructClock(&button0DebounceClock,
-                                                     buttonDebounceSwiFxn, 50,
-                                                     0,
-                                                     0,
-                                                     Board_PIN_BUTTON0);
+    tamperInit(TAMPER_PIN);
+
     button1DebounceClockHandle = Util_constructClock(&button1DebounceClock,
                                                      buttonDebounceSwiFxn, 50,
                                                      0,
@@ -246,7 +246,6 @@ void CustomDevice_bleInit(uint8_t selfEntity)
 
     // Add services to GATT server and give ID of this task for Indication acks.
     LedService_AddService(selfEntity);
-    ButtonService_AddService(selfEntity);
     DataService_AddService(selfEntity);
     ConfigService_AddService(selfEntity);
     TamperService_AddService(selfEntity);
@@ -254,7 +253,6 @@ void CustomDevice_bleInit(uint8_t selfEntity)
     // Register callbacks with the generated services that
     // can generate events (writes received) to the application
     LedService_RegisterAppCBs(&LED_ServiceCBs);
-    ButtonService_RegisterAppCBs(&Button_ServiceCBs);
     DataService_RegisterAppCBs(&Data_ServiceCBs);
     ConfigService_RegisterAppCBs(&Config_ServiceCBs);
     TamperService_RegisterAppCBs(&Tamper_ServiceCBs);
@@ -266,10 +264,6 @@ void CustomDevice_bleInit(uint8_t selfEntity)
     // Initalization of characteristics in LED_Service that can provide data.
     LedService_SetParameter(LS_LED0_ID, LS_LED0_LEN, initVal);
     LedService_SetParameter(LS_LED1_ID, LS_LED1_LEN, initVal);
-
-    // Initalization of characteristics in Button_Service that can provide data.
-    ButtonService_SetParameter(BS_BUTTON0_ID, BS_BUTTON0_LEN, initVal);
-    ButtonService_SetParameter(BS_BUTTON1_ID, BS_BUTTON1_LEN, initVal);
 
     // Initalization of characteristics in Data_Service that can provide data.
     DataService_SetParameter(DS_STRING_ID, sizeof(initString), initString);
@@ -312,23 +306,6 @@ static void buttonDebounceSwiFxn(UArg buttonId)
 
     switch(buttonId)
     {
-    case Board_PIN_BUTTON0:
-        // If button is now released (buttonPinVal is active low, so release is 1)
-        // and button state was pressed (buttonstate is active high so press is 1)
-        if(buttonPinVal && button0State)
-        {
-            // Button was released
-            buttonMsg.state = button0State = 0;
-            sendMsg = TRUE;
-        }
-        else if(!buttonPinVal && !button0State)
-        {
-            // Button was pressed
-            buttonMsg.state = button0State = 1;
-            sendMsg = TRUE;
-        }
-        break;
-
     case Board_PIN_BUTTON1:
         // If button is now released (buttonPinVal is active low, so release is 1)
         // and button state was pressed (buttonstate is active high so press is 1)
@@ -374,7 +351,7 @@ static void buttonDebounceSwiFxn(UArg buttonId)
 static void buttonCallbackFxn(PIN_Handle handle, PIN_Id pinId)
 {
     Log_info1("Button interrupt: %s",
-              (uintptr_t)((pinId == Board_PIN_BUTTON0) ? "Button 0" : "Button 1"));
+              (uintptr_t)((pinId == Board_PIN_BUTTON1) ? "Button 1" : "ERROR"));
 
     // Disable interrupt on that pin for now. Re-enabled after debounce.
     PIN_setConfig(handle, PIN_BM_IRQ, pinId | PIN_IRQ_DIS);
@@ -382,9 +359,6 @@ static void buttonCallbackFxn(PIN_Handle handle, PIN_Id pinId)
     // Start debounce timer
     switch(pinId)
     {
-    case Board_PIN_BUTTON0:
-        Util_startClock((Clock_Struct *)button0DebounceClockHandle);
-        break;
     case Board_PIN_BUTTON1:
         Util_startClock((Clock_Struct *)button1DebounceClockHandle);
         break;
@@ -786,6 +760,7 @@ static void ConfigService_ValueChangeCB(uint16_t connHandle,
     }
 }
 
+#if 0
 /*********************************************************************
  * @fn      ButtonService_CfgChangeCB
  *
@@ -820,6 +795,7 @@ static void ButtonService_CfgChangeCB(uint16_t connHandle,
         }
     }
 }
+#endif
 
 /*********************************************************************
  * @fn      DataService_CfgChangeCB
@@ -916,7 +892,7 @@ static void handleButtonPress(ButtonState_t *pState)
 {
     Log_info2("%s %s",
               (uintptr_t)(pState->pinId ==
-                          Board_PIN_BUTTON0 ? "Button 0" : "Button 1"),
+                      TAMPER_PIN ? "Tamper button" : "Button 1"),
               (uintptr_t)(pState->state ?
                           ANSI_COLOR(FG_GREEN)"pressed"ANSI_COLOR(ATTR_RESET) :
                           ANSI_COLOR(FG_YELLOW)"released"ANSI_COLOR(ATTR_RESET)
@@ -926,9 +902,8 @@ static void handleButtonPress(ButtonState_t *pState)
     // Will automatically send notification/indication if enabled.
     switch(pState->pinId)
     {
-    case Board_PIN_BUTTON0:
-        ButtonService_SetParameter(BS_BUTTON0_ID,
-                                   sizeof(pState->state),
+    case TAMPER_PIN:
+        TamperService_SetParameter(TS_STATE_ID, sizeof(pState->state),
                                    &pState->state);
         break;
     case Board_PIN_BUTTON1:
@@ -950,6 +925,13 @@ void CustomDevice_processApplicationMessage(Msg_t *pMsg)
             break;
 
         case PZ_BUTTON_DEBOUNCED_EVT: /* Message from swi about pin change */
+        {
+            ButtonState_t *pButtonState = (ButtonState_t *)pMsg->pData;
+            handleButtonPress(pButtonState);
+            break;
+        }
+
+        case TAMPER_DEBOUNCED_EVT: /* Message from swi about pin change */
         {
             ButtonState_t *pButtonState = (ButtonState_t *)pMsg->pData;
             handleButtonPress(pButtonState);

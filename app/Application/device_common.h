@@ -60,6 +60,7 @@ typedef struct
 #define PZ_START_ADV_EVT         7  /* Request advertisement start from task ctx   */
 #define PZ_SEND_PARAM_UPD_EVT    8  /* Request parameter update req be sent        */
 #define PZ_CONN_EVT              9  /* Connection Event End notice                 */
+#define TAMPER_DEBOUNCED_EVT    10
 
 #define UTIL_ARRTOHEX_REVERSE     1
 #define UTIL_ARRTOHEX_NO_REVERSE  0
