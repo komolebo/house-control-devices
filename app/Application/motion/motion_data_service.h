@@ -8,7 +8,7 @@
 #ifndef APPLICATION_MOTION_MOTION_DATA_SERVICE_H_
 #define APPLICATION_MOTION_MOTION_DATA_SERVICE_H_
 
-#ifdef MOTION_COMPILE
+#if MOTION_COMPILE
 
 
 /*********************************************************************

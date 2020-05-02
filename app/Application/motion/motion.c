@@ -98,7 +98,7 @@ static void DataService_CfgChangeCB(uint16_t connHandle,
 /*********************************************************************
  * VARIABLES
  */
-uint8_t advertData[ADVERT_DATA_NAME_DISPLAY_LEN + ADVERT_DATA_HEADER_LEN] =
+uint8_t advertData[/*ADVERT_DATA_NAME_DISPLAY_LEN + ADVERT_DATA_HEADER_LEN*/] =
 {
     0x02, // length of this data
     GAP_ADTYPE_FLAGS,
@@ -107,7 +107,13 @@ uint8_t advertData[ADVERT_DATA_NAME_DISPLAY_LEN + ADVERT_DATA_HEADER_LEN] =
     // complete name
     ADVERT_DATA_NAME_DISPLAY_LEN, // length of this data
     GAP_ADTYPE_LOCAL_NAME_COMPLETE,
-    ADVERT_DATA_NAME
+    ADVERT_DATA_NAME,
+
+    GAP_ADTYPE_16BIT_MORE,      // some of the UUID's, but not all
+    0x30,//  LO_UINT16(SIMPLEPROFILE_SERV_UUID),
+    0x11,//HI_UINT16(SIMPLEPROFILE_SERV_UUID)
+    0x40,
+    0x11
 };
 
 /*

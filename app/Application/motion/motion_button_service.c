@@ -5,7 +5,7 @@
  *      Author: Oleh
  */
 
-#ifdef MOTION_COMPILE
+#if MOTION_COMPILE
 
 /*********************************************************************
  * INCLUDES

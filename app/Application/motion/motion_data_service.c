@@ -8,7 +8,7 @@
 /*********************************************************************
  * INCLUDES
  */
-#ifdef MOTION_COMPILE
+#if MOTION_COMPILE
 
 #include <string.h>
 
