@@ -1,5 +1,5 @@
 /*
- * motion_data_service.c
+ * data_service.c
  *
  *  Created on: 18 квіт. 2020 р.
  *      Author: Oleh
@@ -20,7 +20,7 @@
 /* This Header file contains all BLE API and icall structure definition */
 #include "icall_ble_api.h"
 
-#include <motion/motion_config_service.h>
+#include <services/config_service.h>
 #include <device_common.h>
 
 /*********************************************************************

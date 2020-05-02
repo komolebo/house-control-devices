@@ -10,10 +10,10 @@
 
 /* include here device headers: */
 #include <motion/motion.h>
-#include <motion/motion_button_service.h>
-#include <motion/motion_config_service.h>
-#include <motion/motion_data_service.h>
-#include <motion/motion_led_service.h>
+#include <services/button_service.h>
+#include <services/config_service.h>
+#include <services/data_service.h>
+#include <services/led_service.h>
 
 
 /*********************************************************************
