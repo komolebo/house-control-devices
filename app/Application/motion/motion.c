@@ -156,20 +156,13 @@ static TamperServiceCBs_t Tamper_ServiceCBs =
  */
 /* Pin driver handles */
 static PIN_Handle buttonPinHandle;
-#if 0
-static PIN_Handle ledPinHandle;
-#endif
 /* Global memory storage for a PIN_Config table */
 static PIN_State buttonPinState;
-#if 0
-static PIN_State ledPinState;
-#endif
 /*
  * Initial LED pin configuration table
- *   - LEDs Board_PIN_LED0 & Board_PIN_LED1 are off.
+ *   - LED Board_PIN_LED1 are off.
  */
 PIN_Config ledPinTable[] = {
-//    Board_PIN_RLED | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,
     Board_PIN_GLED | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,
     PIN_TERMINATE
 };
@@ -186,13 +179,6 @@ PIN_Config buttonPinTable[] = {
 // Clock objects for debouncing the buttons
 static Clock_Struct button1DebounceClock;
 
-#if 0
-static Clock_Handle button1DebounceClockHandle;
-
-// State of the buttons
-static uint8_t button1State = 0;
-#endif
-
 /*********************************************************************
  * FUNCTIONS
  */
@@ -201,15 +187,6 @@ void CustomDevice_hardwareInit(void)
     // ******************************************************************
     // Hardware initialization
     // ******************************************************************
-#if 0
-    // Open LED pins
-    ledPinHandle = PIN_open(&ledPinState, ledPinTable);
-    if(!ledPinHandle)
-    {
-        Log_error0("Error initializing board LED pins");
-        Task_exit();
-    }
-#endif
     // Open button pins
     buttonPinHandle = PIN_open(&buttonPinState, buttonPinTable);
     if(!buttonPinHandle)
@@ -218,23 +195,8 @@ void CustomDevice_hardwareInit(void)
         Task_exit();
     }
 
-    // Setup callback for button pins
-#if 0
-    if(PIN_registerIntCb(buttonPinHandle, &buttonCallbackFxn) != 0)
-    {
-        Log_error0("Error registering button callback function");
-        Task_exit();
-    }
-#endif
     Tamper_init(TAMPER_PIN);
     Led_init();
-#if 0
-    button1DebounceClockHandle = Util_constructClock(&button1DebounceClock,
-                                                     buttonDebounceSwiFxn, 50,
-                                                     0,
-                                                     0,
-                                                     Board_PIN_BUTTON1);
-#endif
 }
 
 void CustomDevice_bleInit(uint8_t selfEntity)
@@ -276,101 +238,6 @@ void CustomDevice_bleInit(uint8_t selfEntity)
 /*
  *  Callbacks from Swi-context
  *****************************************************************************/
-/*********************************************************************
- * @fn     buttonDebounceSwiFxn
- *
- * @brief  Callback from Clock module on timeout
- *
- *         Determines new state after debouncing
- *
- * @param  buttonId    The pin being debounced
- */
-#if 0
-static void buttonDebounceSwiFxn(UArg buttonId)
-{
-    // Used to send message to app
-    ButtonState_t buttonMsg = { .pinId = buttonId };
-    uint8_t sendMsg = FALSE;
-
-    // Get current value of the button pin after the clock timeout
-    uint8_t buttonPinVal = PIN_getInputValue(buttonId);
-
-    // Set interrupt direction to opposite of debounced state
-    // If button is now released (button is active low, so release is high)
-    if(buttonPinVal)
-    {
-        // Enable negative edge interrupts to wait for press
-        PIN_setConfig(buttonPinHandle, PIN_BM_IRQ, buttonId | PIN_IRQ_NEGEDGE);
-    }
-    else
-    {
-        // Enable positive edge interrupts to wait for relesae
-        PIN_setConfig(buttonPinHandle, PIN_BM_IRQ, buttonId | PIN_IRQ_POSEDGE);
-    }
-
-    switch(buttonId)
-    {
-    case Board_PIN_BUTTON1:
-        // If button is now released (buttonPinVal is active low, so release is 1)
-        // and button state was pressed (buttonstate is active high so press is 1)
-        if(buttonPinVal && button1State)
-        {
-            // Button was released
-            buttonMsg.state = button1State = 0;
-            sendMsg = TRUE;
-        }
-        else if(!buttonPinVal && !button1State)
-        {
-            // Button was pressed
-            buttonMsg.state = button1State = 1;
-            sendMsg = TRUE;
-        }
-        break;
-    }
-
-    if(sendMsg == TRUE)
-    {
-        ButtonState_t *pButtonState = ICall_malloc(sizeof(ButtonState_t));
-        if(pButtonState != NULL)
-        {
-            *pButtonState = buttonMsg;
-            if(enqueueMsg(PZ_BUTTON_DEBOUNCED_EVT, pButtonState) != SUCCESS)
-            {
-              ICall_free(pButtonState);
-            }
-        }
-    }
-}
-#endif
-/*********************************************************************
- * @fn     buttonCallbackFxn
- *
- * @brief  Callback from PIN driver on interrupt
- *
- *         Sets in motion the debouncing.
- *
- * @param  handle    The PIN_Handle instance this is about
- * @param  pinId     The pin that generated the interrupt
- */
-
-#if 0
-static void buttonCallbackFxn(PIN_Handle handle, PIN_Id pinId)
-{
-    Log_info1("Button interrupt: %s",
-              (uintptr_t)((pinId == Board_PIN_BUTTON1) ? "Button 1" : "ERROR"));
-
-    // Disable interrupt on that pin for now. Re-enabled after debounce.
-    PIN_setConfig(handle, PIN_BM_IRQ, pinId | PIN_IRQ_DIS);
-
-    // Start debounce timer
-    switch(pinId)
-    {
-    case Board_PIN_BUTTON1:
-        Util_startClock((Clock_Struct *)button1DebounceClockHandle);
-        break;
-    }
-}
-#endif
 /*
  * @brief  Convenience function for updating characteristic data via pzCharacteristicData_t
  *         structured message.
@@ -418,22 +285,6 @@ void LedService_ValueChangeHandler(
 
     switch(pCharData->paramID)
     {
-#if 0
-    case LS_LED0_ID:
-        Log_info3("Value Change msg: %s %s: %s",
-                  (uintptr_t)"LED Service",
-                  (uintptr_t)"LED0",
-                  (uintptr_t)pretty_data_holder);
-
-        // Do something useful with pCharData->data here
-        // -------------------------
-        // Set the output value equal to the received value. 0 is off, not 0 is on
-        PIN_setOutputValue(ledPinHandle, Board_PIN_RLED, pCharData->data[0]);
-        Log_info2("Turning %s %s",
-                  (uintptr_t)ANSI_COLOR(FG_RED)"LED0"ANSI_COLOR(ATTR_RESET),
-                  (uintptr_t)(pCharData->data[0] ? "on" : "off"));
-        break;
-#endif
     case LS_LED1_ID:
         Log_info3("Value Change msg: %s %s: %s",
                   (uintptr_t)"LED Service",
@@ -769,43 +620,6 @@ static void ConfigService_ValueChangeCB(uint16_t connHandle,
     }
 }
 
-#if 0
-/*********************************************************************
- * @fn      ButtonService_CfgChangeCB
- *
- * @brief   Callback for when a peer enables or disables the CCCD attribute,
- *          indicating they are interested in notifications or indications.
- *
- * @param   connHandle - connection handle
- *          paramID - the parameter ID maps to the characteristic written to
- *          len - length of the data written
- *          pValue - pointer to the data written
- */
-static void ButtonService_CfgChangeCB(uint16_t connHandle,
-                                                  uint8_t paramID, uint16_t len,
-                                                  uint8_t *pValue)
-{
-    Log_info1("(CB) Button Svc Char config change paramID(%d). "
-              "Sending msg to app.", paramID);
-
-    CharacteristicData_t *pValChange =
-        ICall_malloc(sizeof(CharacteristicData_t) + len);
-
-    if(pValChange != NULL)
-    {
-        pValChange->svcUUID = BUTTON_SERVICE_SERV_UUID;
-        pValChange->paramID = paramID;
-        memcpy(pValChange->data, pValue, len);
-        pValChange->dataLen = len;
-
-        if(enqueueMsg(PZ_SERVICE_CFG_EVT, pValChange) != SUCCESS)
-        {
-          ICall_free(pValChange);
-        }
-    }
-}
-#endif
-
 /*********************************************************************
  * @fn      DataService_CfgChangeCB
  *
@@ -915,13 +729,6 @@ static void handleButtonPress(ButtonState_t *pState)
         TamperService_SetParameter(TS_STATE_ID, sizeof(pState->state),
                                    &pState->state);
         break;
-#if 0
-    case Board_PIN_BUTTON1:
-        ButtonService_SetParameter(BS_BUTTON1_ID,
-                                   sizeof(pState->state),
-                                   &pState->state);
-        break;
-#endif
     }
 }
 
