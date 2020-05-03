@@ -20,6 +20,7 @@
 #include <icall.h>
 #include <icall_ble_api.h>
 #include "features/tamper.h"
+#include "features/led.h"
 
 #include <ti/sysbios/knl/Task.h>
 #include <ti/sysbios/knl/Clock.h>
@@ -52,8 +53,6 @@ const uint8_t * SOFTWARE_VERSION =  \
         REL_VERSION_MINOR "."       \
         REL_VERSION_PATCH;
 
-#define TAMPER_PIN                  (Board_PIN_BUTTON0)
-
 /*********************************************************************
  * TYPEDEFS
  */
@@ -63,8 +62,6 @@ const uint8_t * SOFTWARE_VERSION =  \
  * LOCAL FUNCTIONS
  */
 /* Button handling functions */
-static void buttonDebounceSwiFxn(UArg buttonId);
-static void buttonCallbackFxn(PIN_Handle handle, PIN_Id pinId);
 static void handleButtonPress(ButtonState_t *pState);
 
 /* Profile value change handlers */
@@ -159,18 +156,20 @@ static TamperServiceCBs_t Tamper_ServiceCBs =
  */
 /* Pin driver handles */
 static PIN_Handle buttonPinHandle;
+#if 0
 static PIN_Handle ledPinHandle;
-
+#endif
 /* Global memory storage for a PIN_Config table */
 static PIN_State buttonPinState;
+#if 0
 static PIN_State ledPinState;
-
+#endif
 /*
  * Initial LED pin configuration table
  *   - LEDs Board_PIN_LED0 & Board_PIN_LED1 are off.
  */
 PIN_Config ledPinTable[] = {
-    Board_PIN_RLED | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,
+//    Board_PIN_RLED | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,
     Board_PIN_GLED | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,
     PIN_TERMINATE
 };
@@ -181,17 +180,18 @@ PIN_Config ledPinTable[] = {
  */
 PIN_Config buttonPinTable[] = {
     Board_PIN_BUTTON1 | PIN_INPUT_EN | PIN_PULLUP | PIN_IRQ_NEGEDGE,
-
     PIN_TERMINATE
 };
 
 // Clock objects for debouncing the buttons
 static Clock_Struct button1DebounceClock;
+
+#if 0
 static Clock_Handle button1DebounceClockHandle;
 
 // State of the buttons
 static uint8_t button1State = 0;
-
+#endif
 
 /*********************************************************************
  * FUNCTIONS
@@ -201,7 +201,7 @@ void CustomDevice_hardwareInit(void)
     // ******************************************************************
     // Hardware initialization
     // ******************************************************************
-
+#if 0
     // Open LED pins
     ledPinHandle = PIN_open(&ledPinState, ledPinTable);
     if(!ledPinHandle)
@@ -209,7 +209,7 @@ void CustomDevice_hardwareInit(void)
         Log_error0("Error initializing board LED pins");
         Task_exit();
     }
-
+#endif
     // Open button pins
     buttonPinHandle = PIN_open(&buttonPinState, buttonPinTable);
     if(!buttonPinHandle)
@@ -219,19 +219,22 @@ void CustomDevice_hardwareInit(void)
     }
 
     // Setup callback for button pins
+#if 0
     if(PIN_registerIntCb(buttonPinHandle, &buttonCallbackFxn) != 0)
     {
         Log_error0("Error registering button callback function");
         Task_exit();
     }
-
-    tamperInit(TAMPER_PIN);
-
+#endif
+    Tamper_init(TAMPER_PIN);
+    Led_init();
+#if 0
     button1DebounceClockHandle = Util_constructClock(&button1DebounceClock,
                                                      buttonDebounceSwiFxn, 50,
                                                      0,
                                                      0,
                                                      Board_PIN_BUTTON1);
+#endif
 }
 
 void CustomDevice_bleInit(uint8_t selfEntity)
@@ -262,7 +265,7 @@ void CustomDevice_bleInit(uint8_t selfEntity)
     uint8_t initString[] = "This is a pretty long string, isn't it!";
 
     // Initalization of characteristics in LED_Service that can provide data.
-    LedService_SetParameter(LS_LED0_ID, LS_LED0_LEN, initVal);
+//    LedService_SetParameter(LS_LED0_ID, LS_LED0_LEN, initVal);
     LedService_SetParameter(LS_LED1_ID, LS_LED1_LEN, initVal);
 
     // Initalization of characteristics in Data_Service that can provide data.
@@ -282,6 +285,7 @@ void CustomDevice_bleInit(uint8_t selfEntity)
  *
  * @param  buttonId    The pin being debounced
  */
+#if 0
 static void buttonDebounceSwiFxn(UArg buttonId)
 {
     // Used to send message to app
@@ -337,7 +341,7 @@ static void buttonDebounceSwiFxn(UArg buttonId)
         }
     }
 }
-
+#endif
 /*********************************************************************
  * @fn     buttonCallbackFxn
  *
@@ -348,6 +352,8 @@ static void buttonDebounceSwiFxn(UArg buttonId)
  * @param  handle    The PIN_Handle instance this is about
  * @param  pinId     The pin that generated the interrupt
  */
+
+#if 0
 static void buttonCallbackFxn(PIN_Handle handle, PIN_Id pinId)
 {
     Log_info1("Button interrupt: %s",
@@ -364,7 +370,7 @@ static void buttonCallbackFxn(PIN_Handle handle, PIN_Id pinId)
         break;
     }
 }
-
+#endif
 /*
  * @brief  Convenience function for updating characteristic data via pzCharacteristicData_t
  *         structured message.
@@ -412,6 +418,7 @@ void LedService_ValueChangeHandler(
 
     switch(pCharData->paramID)
     {
+#if 0
     case LS_LED0_ID:
         Log_info3("Value Change msg: %s %s: %s",
                   (uintptr_t)"LED Service",
@@ -426,7 +433,7 @@ void LedService_ValueChangeHandler(
                   (uintptr_t)ANSI_COLOR(FG_RED)"LED0"ANSI_COLOR(ATTR_RESET),
                   (uintptr_t)(pCharData->data[0] ? "on" : "off"));
         break;
-
+#endif
     case LS_LED1_ID:
         Log_info3("Value Change msg: %s %s: %s",
                   (uintptr_t)"LED Service",
@@ -436,10 +443,12 @@ void LedService_ValueChangeHandler(
         // Do something useful with pCharData->data here
         // -------------------------
         // Set the output value equal to the received value. 0 is off, not 0 is on
+#if 0
         PIN_setOutputValue(ledPinHandle, Board_PIN_GLED, pCharData->data[0]);
         Log_info2("Turning %s %s",
                   (uintptr_t)ANSI_COLOR(FG_GREEN)"LED1"ANSI_COLOR(ATTR_RESET),
                   (uintptr_t)(pCharData->data[0] ? "on" : "off"));
+#endif
         break;
 
     default:
@@ -906,11 +915,13 @@ static void handleButtonPress(ButtonState_t *pState)
         TamperService_SetParameter(TS_STATE_ID, sizeof(pState->state),
                                    &pState->state);
         break;
+#if 0
     case Board_PIN_BUTTON1:
         ButtonService_SetParameter(BS_BUTTON1_ID,
                                    sizeof(pState->state),
                                    &pState->state);
         break;
+#endif
     }
 }
 
@@ -935,6 +946,12 @@ void CustomDevice_processApplicationMessage(Msg_t *pMsg)
         {
             ButtonState_t *pButtonState = (ButtonState_t *)pMsg->pData;
             handleButtonPress(pButtonState);
+            break;
+        }
+
+        case LED_CLK_EVT:
+        {
+            Led_handleClockEvt();
             break;
         }
 

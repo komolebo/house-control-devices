@@ -23,7 +23,7 @@ static PIN_Handle tamperPinHandle;
 static PIN_State tamperPinState;
 static PIN_Config tamperPinTable[] =
 {
-    Board_PIN_BUTTON0 | PIN_INPUT_EN | PIN_PULLUP | PIN_IRQ_NEGEDGE,
+    TAMPER_PIN | PIN_INPUT_EN | PIN_PULLUP | PIN_IRQ_NEGEDGE,
     PIN_TERMINATE
 };
 
@@ -40,7 +40,7 @@ static void tamperCallbackFxn(PIN_Handle handle, PIN_Id pinId);
 
 
 
-void tamperInit(uint32_t pin)
+void Tamper_init(uint32_t pin)
 {
     tamperPin = pin;
 

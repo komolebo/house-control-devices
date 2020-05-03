@@ -9,7 +9,7 @@
 #define APPLICATION_FEATURES_TAMPER_H_
 
 
-void tamperInit(uint32_t pin);
+void Tamper_init(uint32_t pin);
 
 
 

@@ -20,21 +20,17 @@
 #define DEVICE_STATE_ENABLED                (1)
 #define DEVICE_STATE_DISABLED               (0)
 
+#define LED_HIGH                            (1)
+#define LED_LOW                             (0)
+
 #define MOTION_SENSITIVITY_3M               (0)
 #define MOTION_SENSITIVITY_4M               (1)
 #define MOTION_SENSITIVITY_5M               (2)
 #define MOTION_SENSITIVITY_6M               (3)
 #define MOTION_SENSITIVITY_7M               (4)
 
-/*********************************************************************
- * TYPEDEFS
- */
-// Struct for message about button state
-typedef struct
-{
-    PIN_Id pinId;
-    uint8_t state;
-} ButtonState_t;
+#define TAMPER_PIN                          (Board_PIN_BUTTON0)
+#define LED_PIN                             (Board_PIN_RLED)
 
 
 /*********************************************************************
@@ -61,6 +57,7 @@ typedef struct
 #define PZ_SEND_PARAM_UPD_EVT    8  /* Request parameter update req be sent        */
 #define PZ_CONN_EVT              9  /* Connection Event End notice                 */
 #define TAMPER_DEBOUNCED_EVT    10
+#define LED_CLK_EVT             11
 
 #define UTIL_ARRTOHEX_REVERSE     1
 #define UTIL_ARRTOHEX_NO_REVERSE  0
@@ -74,6 +71,13 @@ enum DeviceType
     DEVICE_GAS,
     DEVICE_COUNT
 };
+
+// Struct for message about button state
+typedef struct
+{
+    PIN_Id pinId;
+    uint8_t state;
+} ButtonState_t;
 
 typedef enum DeviceType DeviceType;
 
