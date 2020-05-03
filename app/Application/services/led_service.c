@@ -40,15 +40,15 @@
  */
 
 // LED_Service Service UUID
-CONST uint8_t LedServiceUUID[ATT_UUID_SIZE] =
+CONST uint8_t LedServiceUUID[ATT_BT_UUID_SIZE] =
 {
-    BASE128_FROM_UINT16(LED_SERVICE_SERV_UUID)
+    LO_UINT16(LED_SERVICE_SERV_UUID), HI_UINT16(LED_SERVICE_SERV_UUID)
 };
 
-// LED0 UUID
-CONST uint8_t ls_LED0UUID[ATT_UUID_SIZE] =
+// MODE UUID
+CONST uint8_t ls_MODEUUID[ATT_BT_UUID_SIZE] =
 {
-    BASE128_FROM_UINT16(LS_LED0_UUID)
+    LO_UINT16(LS_MODE_UUID), HI_UINT16(LS_MODE_UUID)
 };
 
 // LED1 UUID
@@ -68,17 +68,17 @@ static LedServiceCBs_t *pAppCBs = NULL;
  */
 
 // Service declaration
-static CONST gattAttrType_t LedServiceDecl = { ATT_UUID_SIZE, LedServiceUUID };
+static CONST gattAttrType_t LedServiceDecl = { ATT_BT_UUID_SIZE, LedServiceUUID };
 
-// Characteristic "LED0" Properties (for declaration)
-static uint8_t ls_LED0Props = GATT_PROP_READ | GATT_PROP_WRITE |
-                              GATT_PROP_WRITE_NO_RSP;
+// Characteristic "MODE" Properties (for declaration)
+static uint8_t ls_ModeProps = GATT_PROP_READ | GATT_PROP_WRITE |
+                              GATT_PROP_WRITE_NO_RSP; // TODO: NO_RSP?
 
-// Characteristic "LED0" Value variable
-static uint8_t ls_LED0Val[LS_LED0_LEN] = {0};
+// Characteristic "MODE" Value variable
+static uint8_t ls_ModeVal[LS_MODE_LEN] = { 0x01 };
 
-// Length of data in characteristic "LED0" Value variable, initialized to minimal size.
-static uint16_t ls_LED0ValLen = LS_LED0_LEN_MIN;
+// Length of data in characteristic "MODE" Value variable, initialized to minimal size.
+static uint16_t ls_ModeValLen = LS_MODE_LEN_MIN;
 
 // Characteristic "LED1" Properties (for declaration)
 static uint8_t ls_LED1Props = GATT_PROP_READ | GATT_PROP_WRITE |
@@ -103,19 +103,19 @@ static gattAttribute_t LED_ServiceAttrTbl[] =
         0,
         (uint8_t *)&LedServiceDecl
     },
-    // LED0 Characteristic Declaration
+    // Mode Characteristic Declaration
     {
         { ATT_BT_UUID_SIZE, characterUUID },
         GATT_PERMIT_READ,
         0,
-        &ls_LED0Props
+        &ls_ModeProps
     },
-    // LED0 Characteristic Value
+    // Mode Characteristic Value
     {
-        { ATT_UUID_SIZE, ls_LED0UUID },
-        GATT_PERMIT_READ | GATT_PERMIT_WRITE | GATT_PERMIT_WRITE,
+        { ATT_BT_UUID_SIZE, ls_MODEUUID },
+        GATT_PERMIT_READ | GATT_PERMIT_WRITE,
         0,
-        ls_LED0Val
+        ls_ModeVal
     },
     // LED1 Characteristic Declaration
     {
@@ -127,7 +127,7 @@ static gattAttribute_t LED_ServiceAttrTbl[] =
     // LED1 Characteristic Value
     {
         { ATT_UUID_SIZE, ls_LED1UUID },
-        GATT_PERMIT_READ | GATT_PERMIT_WRITE | GATT_PERMIT_WRITE,
+        GATT_PERMIT_READ | GATT_PERMIT_WRITE,
         0,
         ls_LED1Val
     },
@@ -228,14 +228,6 @@ bStatus_t LedService_SetParameter(uint8_t param, uint16_t len, void *value)
 
     switch(param)
     {
-    case LS_LED0_ID:
-        pAttrVal = ls_LED0Val;
-        pValLen = &ls_LED0ValLen;
-        valMinLen = LS_LED0_LEN_MIN;
-        valMaxLen = LS_LED0_LEN;
-        Log_info2("SetParameter : %s len: %d", (uintptr_t)"LED0", len);
-        break;
-
     case LS_LED1_ID:
         pAttrVal = ls_LED1Val;
         pValLen = &ls_LED1ValLen;
@@ -282,10 +274,10 @@ bStatus_t LedService_GetParameter(uint8_t param, uint16_t *len, void *value)
     bStatus_t ret = SUCCESS;
     switch(param)
     {
-    case LS_LED0_ID:
-        *len = MIN(*len, ls_LED0ValLen);
-        memcpy(value, ls_LED0Val, *len);
-        Log_info2("GetParameter : %s returning %d bytes", (uintptr_t)"LED0",
+    case LS_MODE_ID:
+        *len = MIN(*len, ls_ModeValLen);
+        memcpy(value, ls_ModeVal, *len);
+        Log_info2("GetParameter : %s returning %d bytes", (uintptr_t)"MODE",
                   *len);
         break;
 
@@ -325,11 +317,11 @@ static uint8_t LED_Service_findCharParamId(gattAttribute_t *pAttr)
     {
         return(LED_Service_findCharParamId(pAttr - 1)); // Assume the value attribute precedes CCCD and recurse
     }
-    // Is this attribute in "LED0"?
-    else if(ATT_UUID_SIZE == pAttr->type.len &&
-            !memcmp(pAttr->type.uuid, ls_LED0UUID, pAttr->type.len))
+    // Is this attribute in "Mode"?
+    else if(ATT_BT_UUID_SIZE == pAttr->type.len &&
+            !memcmp(pAttr->type.uuid, ls_MODEUUID, pAttr->type.len))
     {
-        return(LS_LED0_ID);
+        return(LS_MODE_ID);
     }
     // Is this attribute in "LED1"?
     else if(ATT_UUID_SIZE == pAttr->type.len &&
@@ -373,15 +365,15 @@ static bStatus_t LED_Service_ReadAttrCB(uint16_t connHandle,
     paramID = LED_Service_findCharParamId(pAttr);
     switch(paramID)
     {
-    case LS_LED0_ID:
-        valueLen = ls_LED0ValLen;
+    case LS_MODE_ID:
+        valueLen = ls_ModeValLen;
 
         Log_info4("ReadAttrCB : %s connHandle: %d offset: %d method: 0x%02x",
-                  (uintptr_t)"LED0",
+                  (uintptr_t)"MODE",
                   connHandle,
                   offset,
                   method);
-        /* Other considerations for LED0 can be inserted here */
+        /* Other considerations for MODE can be inserted here */
         break;
 
     case LS_LED1_ID:
@@ -445,19 +437,19 @@ static bStatus_t LED_Service_WriteAttrCB(uint16_t connHandle,
     paramID = LED_Service_findCharParamId(pAttr);
     switch(paramID)
     {
-    case LS_LED0_ID:
-        writeLenMin = LS_LED0_LEN_MIN;
-        writeLenMax = LS_LED0_LEN;
-        pValueLenVar = &ls_LED0ValLen;
+    case LS_MODE_ID:
+        writeLenMin = LS_MODE_LEN_MIN;
+        writeLenMax = LS_MODE_LEN;
+        pValueLenVar = &ls_ModeValLen;
 
         Log_info5(
             "WriteAttrCB : %s connHandle(%d) len(%d) offset(%d) method(0x%02x)",
-            (uintptr_t)"LED0",
+            (uintptr_t)"MODE",
             connHandle,
             len,
             offset,
             method);
-        /* Other considerations for LED0 can be inserted here */
+        /* Other considerations for MODE can be inserted here */
         break;
 
     case LS_LED1_ID:

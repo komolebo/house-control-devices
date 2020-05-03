@@ -27,10 +27,10 @@
  * Characteristic UUID definitions
  * */
 // LED0 Characteristic defines
-#define LS_LED0_ID                 0
-#define LS_LED0_UUID               0x1111
-#define LS_LED0_LEN                1
-#define LS_LED0_LEN_MIN            1
+#define LS_MODE_ID                 0
+#define LS_MODE_UUID               0x1111
+#define LS_MODE_LEN                1
+#define LS_MODE_LEN_MIN            1
 
 // LED1 Characteristic defines
 #define LS_LED1_ID                 1
@@ -92,6 +92,9 @@
 #define TAMPER_STATE_PRESS              (0x1)
 #define TAMPER_STATE_RELEASE            (0x0)
 #define TAMPER_STATE_UNDEFINED          (0xFF)
+
+#define LED_MODE_DISABLE                (0)
+#define LED_MODE_ENABLE                 (1)
 
 /*********************************************************************
  * MACROS

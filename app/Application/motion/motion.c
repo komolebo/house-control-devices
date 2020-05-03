@@ -227,7 +227,6 @@ void CustomDevice_bleInit(uint8_t selfEntity)
     uint8_t initString[] = "This is a pretty long string, isn't it!";
 
     // Initalization of characteristics in LED_Service that can provide data.
-//    LedService_SetParameter(LS_LED0_ID, LS_LED0_LEN, initVal);
     LedService_SetParameter(LS_LED1_ID, LS_LED1_LEN, initVal);
 
     // Initalization of characteristics in Data_Service that can provide data.
