@@ -70,7 +70,7 @@ static uint8_t ts_TamperProps = GATT_PROP_NOTIFY | GATT_PROP_READ
         | GATT_PROP_INDICATE;
 
 // Characteristic "TAMPER" Value variable
-static uint8_t ts_TamperStateVal[TS_STATE_LEN] = { 0 };
+static uint8_t ts_TamperStateVal[TS_STATE_LEN] = { TAMPER_STATE_PRESS };
 
 // Length of data in characteristic "TAMPER" Value variable, initialized to minimal size.
 static uint16_t ts_TamperStateValLen = TS_STATE_LEN;

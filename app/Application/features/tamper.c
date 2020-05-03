@@ -14,6 +14,7 @@
 #include "Board.h"
 #include "device_common.h"
 #include "util.h"
+#include "profiles_if.h"
 
 
 /* Pin driver handles */
@@ -31,7 +32,7 @@ static Clock_Struct tamperDebounceClock;
 static Clock_Handle tamperDebounceClockHandle;
 
 static uint32_t tamperPin;
-static uint8_t tamperButtonState = 0;
+static uint8_t tamperButtonState = TAMPER_STATE_UNDEFINED;
 
 
 static void tamperDebounceSwiFxn(UArg buttonId);
@@ -103,18 +104,25 @@ static void tamperDebounceSwiFxn(UArg buttonId)
 
     if (buttonId == tamperPin)
     {
+        // Handle undefined tamper button state
+        if (tamperButtonState == TAMPER_STATE_UNDEFINED)
+        {
+            buttonMsg.state = tamperButtonState = (
+                    buttonPinVal ? TAMPER_STATE_RELEASE : TAMPER_STATE_PRESS);
+            sendMsg = TRUE;
+        }
         // If button is now released (buttonPinVal is active low, so release is 1)
         // and button state was pressed (buttonstate is active high so press is 1)
-        if(buttonPinVal && tamperButtonState)
+        else if(buttonPinVal && tamperButtonState)
         {
             // Button was released
-            buttonMsg.state = tamperButtonState = 0;
+            buttonMsg.state = tamperButtonState = TAMPER_STATE_RELEASE;
             sendMsg = TRUE;
         }
         else if(!buttonPinVal && !tamperButtonState)
         {
             // Button was pressed
-            buttonMsg.state = tamperButtonState = 1;
+            buttonMsg.state = tamperButtonState = TAMPER_STATE_PRESS;
             sendMsg = TRUE;
         }
     }

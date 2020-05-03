@@ -86,6 +86,13 @@
 #define UUID_DATA_LEN               (2) // 16bit UUID addressing
 
 
+/*////////////////////////////////////////////////////////////////////
+ * DATA DEFINITIONS CONSTANTS
+ * */
+#define TAMPER_STATE_PRESS              (0x1)
+#define TAMPER_STATE_RELEASE            (0x0)
+#define TAMPER_STATE_UNDEFINED          (0xFF)
+
 /*********************************************************************
  * MACROS
  */
