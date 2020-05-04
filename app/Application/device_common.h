@@ -49,7 +49,7 @@
 /*********************************************************************
  * TYPEDEFS
  */
-enum
+typedef enum
 {
     EVT_SERVICE_WRITE,      /* A characteristic value has been written     */
     EVT_SERVICE_CFG,        /* A characteristic configuration has changed  */
@@ -62,8 +62,10 @@ enum
     EVT_SEND_PARAM_UPD,     /* Request parameter update req be sent        */
     EVT_CONN,               /* Connection Event End notice                 */
     EVT_TAMPER_CHANGED,     /* Tamper button state changed                 */
-    EVT_LED_CLK             /* LED blinking clock event                    */
-};
+    EVT_LED_CLK,            /* LED blinking clock event                    */
+    // to handle later:
+    EVT_INITIALIZED,
+} appEvt_t;
 
 typedef enum
 {

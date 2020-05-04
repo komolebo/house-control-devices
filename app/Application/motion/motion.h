@@ -21,6 +21,17 @@
  * TYPEDEFS
  */
 
+typedef enum
+{
+    MOTION_INIT,
+    MOTION_WAIT_CONNECT,
+    MOTION_DISABLED,
+    MOTION_CALIBRATE,
+    MOTION_MEASURE,
+    MOTION_DETECT,
+    MOTION_STATE_MAX
+} motionState_t;
+
 /*********************************************************************
  * MACROS
  */

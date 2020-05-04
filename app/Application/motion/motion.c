@@ -52,10 +52,20 @@ const uint8_t * SOFTWARE_VERSION =  \
         REL_VERSION_MINOR "."       \
         REL_VERSION_PATCH;
 
+
 /*********************************************************************
  * TYPEDEFS
  */
 
+typedef void (*motionHandlerFunc_t)(/*ledMode_t reqMode*/);
+
+typedef struct
+{
+    motionState_t from;
+    appEvt_t evt;
+    motionState_t to;
+    motionHandlerFunc_t func;
+} motionSm_t;
 
 /*********************************************************************
  * LOCAL FUNCTIONS
@@ -92,7 +102,28 @@ static void TamperService_CfgChangeCB(uint16_t connHandle,
 /*********************************************************************
  * VARIABLES
  */
+static motionState_t motionState = MOTION_INIT;
+static motionSm_t motionSm[] =
+{
+ { MOTION_INIT,         EVT_INITIALIZED,    MOTION_WAIT_CONNECT,    NULL},
 
+ { MOTION_WAIT_CONNECT, EVT_CONN,           MOTION_DISABLED,        NULL},
+ { MOTION_WAIT_CONNECT, EVT_CONN,           MOTION_CALIBRATE,       NULL},
+
+ { MOTION_CALIBRATE,    NULL,   MOTION_MEASURE,     NULL },
+ { MOTION_CALIBRATE,    NULL,   MOTION_DISABLED,    NULL },
+// { MOTION_CALIBRATE,    NULL,   MOTION_CALIBRATE,   NULL },
+
+ { MOTION_DISABLED,     NULL,               MOTION_MEASURE,     NULL },
+
+ { MOTION_MEASURE,      NULL,               MOTION_DETECT,      NULL },
+ { MOTION_MEASURE,      NULL,               MOTION_MEASURE,     NULL },
+ { MOTION_MEASURE,      NULL,               MOTION_DISABLED,    NULL },
+
+ { MOTION_DETECT,       NULL,               MOTION_DETECT,      NULL },
+ { MOTION_DETECT,       NULL,               MOTION_MEASURE,     NULL },
+ { MOTION_DETECT,       NULL,               MOTION_DISABLED,    NULL },
+};
 
 /*
  * Callbacks in the user application for events originating from BLE services.
