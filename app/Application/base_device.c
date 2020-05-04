@@ -696,11 +696,11 @@ static void BaseDevice_processApplicationMessage(Msg_t *pMsg)
           AssertHandler(HAL_ASSERT_CAUSE_HARDWARE_ERROR,0);
           break;
 
-      case PZ_ADV_EVT:
+      case EVT_ADV:
           ProjectZero_processAdvEvent((pzGapAdvEventData_t*)(pMsg->pData));
           break;
 
-      case PZ_SEND_PARAM_UPD_EVT:
+      case EVT_SEND_PARAM_UPD:
       {
           // Send connection parameter update
           SendParamReq_t* req = (SendParamReq_t *)pMsg->pData;
@@ -708,7 +708,7 @@ static void BaseDevice_processApplicationMessage(Msg_t *pMsg)
       }
       break;
 
-      case PZ_START_ADV_EVT:
+      case EVT_START_ADV:
           if(linkDB_NumActive() < MAX_NUM_BLE_CONNS)
           {
               // Enable advertising if there is room for more connections
@@ -716,18 +716,18 @@ static void BaseDevice_processApplicationMessage(Msg_t *pMsg)
           }
           break;
 
-      case PZ_PAIRSTATE_EVT: /* Message about the pairing state */
+      case EVT_PAIRSTATE: /* Message about the pairing state */
           ProjectZero_processPairState((pzPairStateData_t*)(pMsg->pData));
           break;
 
-      case PZ_PASSCODE_EVT: /* Message about pairing PIN request */
+      case EVT_PASSCODE: /* Message about pairing PIN request */
       {
           pzPasscodeReq_t *pReq = (pzPasscodeReq_t *)pMsg->pData;
           ProjectZero_processPasscode(pReq);
       }
       break;
 
-      case PZ_CONN_EVT:
+      case EVT_CONN:
         ProjectZero_processConnEvt((Gap_ConnEventRpt_t *)(pMsg->pData));
         break;
 
@@ -1286,7 +1286,7 @@ static void ProjectZero_paramUpdClockHandler(UArg arg)
     if(req)
     {
         req->connHandle = (uint16_t)arg;
-        if(enqueueMsg(PZ_SEND_PARAM_UPD_EVT, req) != SUCCESS)
+        if(enqueueMsg(EVT_SEND_PARAM_UPD, req) != SUCCESS)
         {
             ICall_free(req);
         }
@@ -1605,7 +1605,7 @@ static void CommonDev_advCallback(uint32_t event, void *pBuf, uintptr_t arg)
         eventData->event = event;
         eventData->pBuf = pBuf;
 
-        if(enqueueMsg(PZ_ADV_EVT, eventData) != SUCCESS)
+        if(enqueueMsg(EVT_ADV, eventData) != SUCCESS)
         {
           ICall_free(eventData);
         }
@@ -1633,7 +1633,7 @@ static void ProjectZero_pairStateCb(uint16_t connHandle, uint8_t state,
         pairState->connHandle = connHandle;
         pairState->status = status;
 
-        if(enqueueMsg(PZ_PAIRSTATE_EVT, pairState) != SUCCESS)
+        if(enqueueMsg(EVT_PAIRSTATE, pairState) != SUCCESS)
         {
           ICall_free(pairState);
         }
@@ -1667,7 +1667,7 @@ static void ProjectZero_passcodeCb(uint8_t *pDeviceAddr,
         req->uiOutputs = uiOutputs;
         req->numComparison = numComparison;
 
-        if(enqueueMsg(PZ_PASSCODE_EVT, req) != SUCCESS)
+        if(enqueueMsg(EVT_PASSCODE, req) != SUCCESS)
         {
           ICall_free(req);
         }

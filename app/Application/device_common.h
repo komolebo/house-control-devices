@@ -44,33 +44,34 @@
 // Advert data header len to determine name string address
 #define ADVERT_DATA_HEADER_LEN  (5)
 
-// Types of messages that can be sent to the user application task from other
-// tasks or interrupts. Note: Messages from BLE Stack are sent differently.
-#define PZ_SERVICE_WRITE_EVT     0  /* A characteristic value has been written     */
-#define PZ_SERVICE_CFG_EVT       1  /* A characteristic configuration has changed  */
-#define PZ_UPDATE_CHARVAL_EVT    2  /* Request from ourselves to update a value    */
-#define PZ_BUTTON_DEBOUNCED_EVT  3  /* A button has been debounced with new value  */
-#define PZ_PAIRSTATE_EVT         4  /* The pairing state is updated                */
-#define PZ_PASSCODE_EVT          5  /* A pass-code/PIN is requested during pairing */
-#define PZ_ADV_EVT               6  /* A subscribed advertisement activity         */
-#define PZ_START_ADV_EVT         7  /* Request advertisement start from task ctx   */
-#define PZ_SEND_PARAM_UPD_EVT    8  /* Request parameter update req be sent        */
-#define PZ_CONN_EVT              9  /* Connection Event End notice                 */
-#define TAMPER_DEBOUNCED_EVT    10
-#define LED_CLK_EVT             11
-
 #define UTIL_ARRTOHEX_REVERSE     1
 #define UTIL_ARRTOHEX_NO_REVERSE  0
 /*********************************************************************
  * TYPEDEFS
  */
-enum DeviceType
+enum
+{
+    EVT_SERVICE_WRITE,      /* A characteristic value has been written     */
+    EVT_SERVICE_CFG,        /* A characteristic configuration has changed  */
+    EVT_UPDATE_CHARVAL,     /* Request from ourselves to update a value    */
+    EVT_BUTTON_DEBOUNCED,   /* A button has been debounced with new value  */
+    EVT_PAIRSTATE,          /* The pairing state is updated                */
+    EVT_PASSCODE,           /* A pass-code/PIN is requested during pairing */
+    EVT_ADV,                /* A subscribed advertisement activity         */
+    EVT_START_ADV,          /* Request advertisement start from task ctx   */
+    EVT_SEND_PARAM_UPD,     /* Request parameter update req be sent        */
+    EVT_CONN,               /* Connection Event End notice                 */
+    EVT_TAMPER_CHANGED,     /* Tamper button state changed                 */
+    EVT_LED_CLK             /* LED blinking clock event                    */
+};
+
+typedef enum
 {
     DEVICE_MOTION,
     DEVICE_SMOKE,
     DEVICE_GAS,
     DEVICE_COUNT
-};
+} DeviceType;
 
 // Struct for message about button state
 typedef struct
@@ -78,8 +79,6 @@ typedef struct
     PIN_Id pinId;
     uint8_t state;
 } ButtonState_t;
-
-typedef enum DeviceType DeviceType;
 
 // Struct for messages about characteristic data
 typedef struct

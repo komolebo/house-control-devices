@@ -353,5 +353,5 @@ static void Led_processRequest(ledMode_t reqMode, uint32_t reqBlinkPer,
 static void Led_clockCallback()
 {
     // Process in application context
-    VOID enqueueMsg(LED_CLK_EVT, NULL);
+    VOID enqueueMsg(EVT_LED_CLK, NULL);
 }

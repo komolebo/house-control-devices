@@ -446,7 +446,7 @@ static void DataService_ValueChangeCB(uint16_t connHandle,
         memcpy(pValChange->data, pValue, len);
         pValChange->dataLen = len;
 
-        if(enqueueMsg(PZ_SERVICE_WRITE_EVT, pValChange) != SUCCESS)
+        if(enqueueMsg(EVT_SERVICE_WRITE, pValChange) != SUCCESS)
         {
           ICall_free(pValChange);
         }
@@ -482,7 +482,7 @@ static void ConfigService_ValueChangeCB(uint16_t connHandle,
         memcpy(pValChange->data, pValue, len);
         pValChange->dataLen = len;
 
-        if(enqueueMsg(PZ_SERVICE_WRITE_EVT, pValChange) != SUCCESS)
+        if(enqueueMsg(EVT_SERVICE_WRITE, pValChange) != SUCCESS)
         {
           ICall_free(pValChange);
         }
@@ -517,7 +517,7 @@ static void DataService_CfgChangeCB(uint16_t connHandle,
         memcpy(pValChange->data, pValue, len);
         pValChange->dataLen = len;
 
-        if(enqueueMsg(PZ_SERVICE_CFG_EVT, pValChange) != SUCCESS)
+        if(enqueueMsg(EVT_SERVICE_CFG, pValChange) != SUCCESS)
         {
           ICall_free(pValChange);
         }
@@ -562,7 +562,7 @@ static void TamperService_CfgChangeCB(uint16_t connHandle,
         memcpy(pValChange->data, pValue, len);
         pValChange->dataLen = len;
 
-        if(enqueueMsg(PZ_SERVICE_CFG_EVT, pValChange) != SUCCESS)
+        if(enqueueMsg(EVT_SERVICE_CFG, pValChange) != SUCCESS)
         {
           ICall_free(pValChange);
         }
@@ -607,31 +607,31 @@ void CustomDevice_processApplicationMessage(Msg_t *pMsg)
 
     switch(pMsg->event)
     {
-        case PZ_UPDATE_CHARVAL_EVT: /* Message from ourselves to send  */
+        case EVT_UPDATE_CHARVAL: /* Message from ourselves to send  */
             ProjectZero_updateCharVal(pCharData);
             break;
 
-        case PZ_BUTTON_DEBOUNCED_EVT: /* Message from swi about pin change */
+        case EVT_BUTTON_DEBOUNCED: /* Message from swi about pin change */
         {
             ButtonState_t *pButtonState = (ButtonState_t *)pMsg->pData;
             handleButtonPress(pButtonState);
             break;
         }
 
-        case TAMPER_DEBOUNCED_EVT: /* Message from swi about pin change */
+        case EVT_TAMPER_CHANGED: /* Message from swi about pin change */
         {
             ButtonState_t *pButtonState = (ButtonState_t *)pMsg->pData;
             handleButtonPress(pButtonState);
             break;
         }
 
-        case LED_CLK_EVT:
+        case EVT_LED_CLK:
         {
             Led_handleClockEvt();
             break;
         }
 
-        case PZ_SERVICE_CFG_EVT: /* Message about received CCCD write */
+        case EVT_SERVICE_CFG: /* Message about received CCCD write */
             /* Call different handler per service */
             switch(pCharData->svcUUID)
             {
@@ -644,7 +644,7 @@ void CustomDevice_processApplicationMessage(Msg_t *pMsg)
             }
             break;
 
-        case PZ_SERVICE_WRITE_EVT: /* Message about received value write */
+        case EVT_SERVICE_WRITE: /* Message about received value write */
             /* Call different handler per service */
             switch(pCharData->svcUUID)
             {

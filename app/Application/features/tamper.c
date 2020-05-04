@@ -133,7 +133,7 @@ static void tamperDebounceSwiFxn(UArg buttonId)
         if(pButtonState != NULL)
         {
             *pButtonState = buttonMsg;
-            if(enqueueMsg(TAMPER_DEBOUNCED_EVT, pButtonState) != SUCCESS)
+            if(enqueueMsg(EVT_TAMPER_CHANGED, pButtonState) != SUCCESS)
             {
               ICall_free(pButtonState);
             }
