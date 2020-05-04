@@ -80,17 +80,17 @@ static void Led_processRequest(ledMode_t reqMode, uint32_t reqBlinkPer,
 
 static const ledSM_t ledSmTable[] =
 {
- { LED_OFF,             LED_OFF,            NULL                          },
+// { LED_OFF,             LED_OFF,            NULL                          },
  { LED_OFF,             LED_SOLID,          LedSm_switchModeImmediately   },
  { LED_OFF,             LED_BLINK,          LedSm_switchModeImmediately   },
  { LED_OFF,             LED_BLINK_N_TIMES,  LedSm_saveCurrModeToRestore   },
 
- { LED_SOLID,           LED_SOLID,          NULL                          },
+// { LED_SOLID,           LED_SOLID,          NULL                          },
  { LED_SOLID,           LED_OFF,            LedSm_switchModeImmediately   },
  { LED_SOLID,           LED_BLINK,          LedSm_switchModeImmediately   },
  { LED_SOLID,           LED_BLINK_N_TIMES,  LedSm_saveCurrModeToRestore   },
 
- { LED_BLINK,           LED_BLINK,          NULL                          },
+// { LED_BLINK,           LED_BLINK,          NULL                          },
  { LED_BLINK,           LED_OFF,            LedSm_switchModeImmediately   },
  { LED_BLINK,           LED_SOLID,          LedSm_switchModeImmediately   },
  { LED_BLINK,           LED_BLINK_N_TIMES,  LedSm_saveCurrModeToRestore   },

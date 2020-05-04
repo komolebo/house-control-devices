@@ -13,7 +13,6 @@
 #include <services/button_service.h>
 #include <services/config_service.h>
 #include <services/data_service.h>
-#include <services/led_service.h>
 
 
 /*********************************************************************

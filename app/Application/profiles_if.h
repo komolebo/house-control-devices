@@ -26,11 +26,6 @@
 /* ---------------------------------------------------------------------------
  * Characteristic UUID definitions
  * */
-// LED0 Characteristic defines
-#define LS_MODE_ID                 0
-#define LS_MODE_UUID               0x1111
-#define LS_MODE_LEN                1
-#define LS_MODE_LEN_MIN            1
 
 // LED1 Characteristic defines
 #define LS_LED1_ID                 1
@@ -76,6 +71,12 @@
 #define CS_SENSITIVITY_ID            2
 #define ÑS_SENSITIVITY_UUID          0x1143
 #define CS_SENSITIVITY_LEN           1
+
+// LED0 Characteristic defines
+#define CS_LED_ID                   3
+#define CS_LED_UUID                 0x1144
+#define CS_LED_LEN                  1
+#define CS_LED_LEN_MIN              1
 
 // State Characteristic defines
 #define TS_STATE_ID                  0

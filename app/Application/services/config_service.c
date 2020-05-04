@@ -63,6 +63,12 @@ CONST uint8_t cs_SensitivityUUID[ATT_UUID_SIZE] =
     BASE128_FROM_UINT16(ÑS_SENSITIVITY_UUID)
 };
 
+// MODE UUID
+CONST uint8_t cs_LEDUUID[ATT_BT_UUID_SIZE] =
+{
+    LO_UINT16(CS_LED_UUID), HI_UINT16(CS_LED_UUID)
+};
+
 /*********************************************************************
  * LOCAL VARIABLES
  */
@@ -104,6 +110,15 @@ static uint8_t cs_SensitivityVal[CS_SENSITIVITY_LEN] = { MOTION_SENSITIVITY_3M }
 // Length of data in characteristic "Sensitivity" Value variable
 static uint16_t cs_SensitivityValLen = CS_SENSITIVITY_LEN;
 
+// Characteristic "MODE" Properties (for declaration)
+static uint8_t cs_LedProps = GATT_PROP_READ | GATT_PROP_WRITE |
+                              GATT_PROP_WRITE_NO_RSP; // TODO: NO_RSP?
+
+// Characteristic "MODE" Value variable
+static uint8_t cs_LedVal[CS_LED_LEN] = { 0x01 };
+
+// Length of data in characteristic "MODE" Value variable, initialized to minimal size.
+static uint16_t cs_LedValLen = CS_LED_LEN_MIN;
 /*********************************************************************
  * Profile Attributes - Table
  */
@@ -138,7 +153,7 @@ static gattAttribute_t Config_ServiceAttrTbl[] =
             0,
             &cs_ModeProps
         },
-            // Stream Characteristic Value
+            // Mode Characteristic Value
             {
                 { ATT_UUID_SIZE, cs_ModeUUID },
                 GATT_PERMIT_READ | GATT_PERMIT_WRITE,
@@ -158,6 +173,20 @@ static gattAttribute_t Config_ServiceAttrTbl[] =
                 GATT_PERMIT_READ | GATT_PERMIT_WRITE,
                 0,
                 cs_SensitivityVal
+            },
+        // LSMode Characteristic Declaration
+        {
+            { ATT_BT_UUID_SIZE, characterUUID },
+            GATT_PERMIT_READ,
+            0,
+            &cs_LedProps
+        },
+            // Mode Characteristic Value
+            {
+                { ATT_BT_UUID_SIZE, cs_LEDUUID },
+                GATT_PERMIT_READ | GATT_PERMIT_WRITE,
+                0,
+                cs_LedVal
             },
 };
 
@@ -367,6 +396,12 @@ bStatus_t ConfigService_GetParameter(uint8_t param, uint16_t *len, void *value)
                   *(uint8_t*)value);
         break;
 
+    case CS_LED_ID:
+        *len = MIN(*len, cs_LedValLen);
+        memcpy(value, cs_LedVal, *len);
+        Log_info2("GetParameter : %s returning %d bytes", (uintptr_t)"Led",
+                  *len);
+        break;
     default:
         Log_error1("GetParameter: Parameter #%d not valid.", param);
         ret = INVALIDPARAMETER;
@@ -413,6 +448,12 @@ static uint8_t Config_Service_findCharParamId(gattAttribute_t *pAttr)
             !memcmp(pAttr->type.uuid, cs_SensitivityUUID, pAttr->type.len))
     {
         return(CS_SENSITIVITY_ID);
+    }
+    // Is this attribute in "Mode"?
+    else if(ATT_BT_UUID_SIZE == pAttr->type.len &&
+            !memcmp(pAttr->type.uuid, cs_LEDUUID, pAttr->type.len))
+    {
+        return(CS_LED_ID);
     }
     else
     {
@@ -483,6 +524,16 @@ static bStatus_t Config_Service_ReadAttrCB(uint16_t connHandle,
         /* Other considerations for Stream can be inserted here */
         break;
 
+    case CS_LED_ID:
+        valueLen = cs_LedValLen;
+
+        Log_info4("ReadAttrCB : %s connHandle: %d offset: %d method: 0x%02x",
+                  (uintptr_t)"LED",
+                  connHandle,
+                  offset,
+                  method);
+        /* Other considerations for MODE can be inserted here */
+        break;
     default:
         Log_error0("Attribute was not found.");
         return(ATT_ERR_ATTR_NOT_FOUND);
@@ -600,7 +651,19 @@ static bStatus_t Config_Service_WriteAttrCB(uint16_t connHandle,
             method);
         /* Other considerations for Stream can be inserted here */
         break;
+    case CS_LED_ID:
+         writeLen = CS_LED_LEN;
+         pValueLenVar = &cs_LedValLen;
 
+         Log_info5(
+             "WriteAttrCB : %s connHandle(%d) len(%d) offset(%d) method(0x%02x)",
+             (uintptr_t)"LED",
+             connHandle,
+             len,
+             offset,
+             method);
+         /* Other considerations for MODE can be inserted here */
+         break;
     default:
         Log_error0("Attribute was not found.");
         return(ATT_ERR_ATTR_NOT_FOUND);

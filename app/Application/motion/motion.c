@@ -13,7 +13,6 @@
 #include <services/button_service.h>
 #include <services/config_service.h>
 #include <services/data_service.h>
-#include <services/led_service.h>
 #include <services/tamper_service.h>
 #include <devinfoservice.h>
 #include <device_common.h>
@@ -66,8 +65,6 @@ static void handleButtonPress(ButtonState_t *pState);
 
 /* Profile value change handlers */
 static void ProjectZero_updateCharVal(CharacteristicData_t *pCharData);
-static void LedService_ValueChangeHandler(
-    CharacteristicData_t *pCharData);
 static void ButtonService_CfgChangeHandler(
     CharacteristicData_t *pCharData);
 static void DataService_ValueChangeHandler(
@@ -75,10 +72,6 @@ static void DataService_ValueChangeHandler(
 static void ConfigService_ValueChangeHandler(
     CharacteristicData_t *pCharData);
 
-static void LedService_ValueChangeCB(uint16_t connHandle,
-                                     uint8_t paramID,
-                                     uint16_t len,
-                                     uint8_t *pValue);
 static void DataService_ValueChangeCB(uint16_t connHandle,
                                       uint8_t paramID,
                                       uint16_t len,
@@ -87,12 +80,6 @@ static void ConfigService_ValueChangeCB(uint16_t connHandle,
                                         uint8_t paramID,
                                         uint16_t len,
                                         uint8_t *pValue);
-#if 0
-static void ButtonService_CfgChangeCB(uint16_t connHandle,
-                                      uint8_t paramID,
-                                      uint16_t len,
-                                      uint8_t *pValue);
-#endif
 static void DataService_CfgChangeCB(uint16_t connHandle,
                                     uint8_t paramID,
                                     uint16_t len,
@@ -110,24 +97,6 @@ static void TamperService_CfgChangeCB(uint16_t connHandle,
 /*
  * Callbacks in the user application for events originating from BLE services.
  */
-// LED Service callback handler.
-// The type LED_ServiceCBs_t is defined in led_service.h
-static LedServiceCBs_t LED_ServiceCBs =
-{
-    .pfnChangeCb = LedService_ValueChangeCB,  // Characteristic value change callback handler
-    .pfnCfgChangeCb = NULL, // No notification-/indication enabled chars in LED Service
-};
-
-#if 0
-// Button Service callback handler.
-// The type Button_ServiceCBs_t is defined in button_service.h
-static ButtonServiceCBs_t Button_ServiceCBs =
-{
-    .pfnChangeCb = NULL,  // No writable chars in Button Service, so no change handler.
-    .pfnCfgChangeCb = ButtonService_CfgChangeCB, // Noti/ind configuration callback handler
-};
-#endif
-
 // Data Service callback handler.
 // The type Data_ServiceCBs_t is defined in data_service.h
 static DataServiceCBs_t Data_ServiceCBs =
@@ -141,7 +110,7 @@ static DataServiceCBs_t Data_ServiceCBs =
 static ConfigServiceCBs_t Config_ServiceCBs =
 {
     .pfnChangeCb = ConfigService_ValueChangeCB,  // Characteristic value change callback handler
-    .pfnCfgChangeCb = NULL, // No notification-/indication enabled chars in LED Service
+    .pfnCfgChangeCb = NULL, // No notification-/indication enabled chars in Config Service
 };
 
 // Tamper Service callback handler.
@@ -158,15 +127,6 @@ static TamperServiceCBs_t Tamper_ServiceCBs =
 static PIN_Handle buttonPinHandle;
 /* Global memory storage for a PIN_Config table */
 static PIN_State buttonPinState;
-/*
- * Initial LED pin configuration table
- *   - LED Board_PIN_LED1 are off.
- */
-PIN_Config ledPinTable[] = {
-    Board_PIN_GLED | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,
-    PIN_TERMINATE
-};
-
 /*
  * Application button pin configuration table:
  *   - Buttons interrupts are configured to trigger on falling edge.
@@ -210,14 +170,12 @@ void CustomDevice_bleInit(uint8_t selfEntity)
                          (void*)SOFTWARE_VERSION);
 
     // Add services to GATT server and give ID of this task for Indication acks.
-    LedService_AddService(selfEntity);
     DataService_AddService(selfEntity);
     ConfigService_AddService(selfEntity);
     TamperService_AddService(selfEntity);
 
     // Register callbacks with the generated services that
     // can generate events (writes received) to the application
-    LedService_RegisterAppCBs(&LED_ServiceCBs);
     DataService_RegisterAppCBs(&Data_ServiceCBs);
     ConfigService_RegisterAppCBs(&Config_ServiceCBs);
     TamperService_RegisterAppCBs(&Tamper_ServiceCBs);
@@ -225,9 +183,6 @@ void CustomDevice_bleInit(uint8_t selfEntity)
     // Placeholder variable for characteristic intialization
     uint8_t initVal[40] = {0};
     uint8_t initString[] = "This is a pretty long string, isn't it!";
-
-    // Initalization of characteristics in LED_Service that can provide data.
-    LedService_SetParameter(LS_LED1_ID, LS_LED1_LEN, initVal);
 
     // Initalization of characteristics in Data_Service that can provide data.
     DataService_SetParameter(DS_STRING_ID, sizeof(initString), initString);
@@ -249,60 +204,10 @@ static void ProjectZero_updateCharVal(CharacteristicData_t *pCharData)
 {
     switch(pCharData->svcUUID)
     {
-    case LED_SERVICE_SERV_UUID:
-        LedService_SetParameter(pCharData->paramID, pCharData->dataLen,
-                                pCharData->data);
-        break;
-
     case BUTTON_SERVICE_SERV_UUID:
         ButtonService_SetParameter(pCharData->paramID, pCharData->dataLen,
                                    pCharData->data);
         break;
-    }
-}
-
-/*
- * @brief   Handle a write request sent from a peer device.
- *
- *          Invoked by the Task based on a message received from a callback.
- *
- *          When we get here, the request has already been accepted by the
- *          service and is valid from a BLE protocol perspective as well as
- *          having the correct length as defined in the service implementation.
- *
- * @param   pCharData  pointer to malloc'd char write data
- *
- * @return  None.
- */
-void LedService_ValueChangeHandler(
-    CharacteristicData_t *pCharData)
-{
-    static uint8_t pretty_data_holder[16]; // 5 bytes as hex string "AA:BB:CC:DD:EE"
-    util_arrtohex(pCharData->data, pCharData->dataLen,
-                  pretty_data_holder, sizeof(pretty_data_holder),
-                  UTIL_ARRTOHEX_NO_REVERSE);
-
-    switch(pCharData->paramID)
-    {
-    case LS_LED1_ID:
-        Log_info3("Value Change msg: %s %s: %s",
-                  (uintptr_t)"LED Service",
-                  (uintptr_t)"LED1",
-                  (uintptr_t)pretty_data_holder);
-
-        // Do something useful with pCharData->data here
-        // -------------------------
-        // Set the output value equal to the received value. 0 is off, not 0 is on
-#if 0
-        PIN_setOutputValue(ledPinHandle, Board_PIN_GLED, pCharData->data[0]);
-        Log_info2("Turning %s %s",
-                  (uintptr_t)ANSI_COLOR(FG_GREEN)"LED1"ANSI_COLOR(ATTR_RESET),
-                  (uintptr_t)(pCharData->data[0] ? "on" : "off"));
-#endif
-        break;
-
-    default:
-        return;
     }
 }
 
@@ -512,41 +417,6 @@ void DataService_CfgChangeHandler(CharacteristicData_t *pCharData)
     }
 }
 
-
-/*********************************************************************
- * @fn      LedService_ValueChangeCB
- *
- * @brief   Callback for characteristic change when a peer writes to us
- *
- * @param   connHandle - connection handle
- *          paramID - the parameter ID maps to the characteristic written to
- *          len - length of the data written
- *          pValue - pointer to the data written
- */
-static void LedService_ValueChangeCB(uint16_t connHandle,
-                                                 uint8_t paramID, uint16_t len,
-                                                 uint8_t *pValue)
-{
-    // See the service header file to compare paramID with characteristic.
-    Log_info1("(CB) LED Svc Characteristic value change: paramID(%d). "
-              "Sending msg to app.", paramID);
-
-    CharacteristicData_t *pValChange =
-        ICall_malloc(sizeof(CharacteristicData_t) + len);
-
-    if(pValChange != NULL)
-    {
-        pValChange->svcUUID = LED_SERVICE_SERV_UUID;
-        pValChange->paramID = paramID;
-        memcpy(pValChange->data, pValue, len);
-        pValChange->dataLen = len;
-
-        if(enqueueMsg(PZ_SERVICE_WRITE_EVT, pValChange) != SUCCESS)
-        {
-          ICall_free(pValChange);
-        }
-    }
-}
 
 /*********************************************************************
  * @fn      DataService_ValueChangeCB
@@ -778,9 +648,6 @@ void CustomDevice_processApplicationMessage(Msg_t *pMsg)
             /* Call different handler per service */
             switch(pCharData->svcUUID)
             {
-              case LED_SERVICE_SERV_UUID:
-                  LedService_ValueChangeHandler(pCharData);
-                  break;
               case DATA_SERVICE_SERV_UUID:
                   DataService_ValueChangeHandler(pCharData);
                   break;
