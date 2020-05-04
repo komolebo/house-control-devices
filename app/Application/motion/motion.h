@@ -24,8 +24,7 @@
 typedef enum
 {
     MOTION_INIT,
-    MOTION_WAIT_CONNECT,
-    MOTION_DISABLED,
+    MOTION_DISABLE,
     MOTION_CALIBRATE,
     MOTION_MEASURE,
     MOTION_DETECT,
@@ -48,8 +47,6 @@ typedef enum
 extern void CustomDevice_hardwareInit(void);
 extern void CustomDevice_bleInit(uint8_t selfEntity);
 extern void CustomDevice_processApplicationMessage(Msg_t *pMsg);
-
-
 
 #endif
 #endif /* APPLICATION_MOTION_H_ */

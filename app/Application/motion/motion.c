@@ -26,6 +26,7 @@
 #include <ti/sysbios/knl/Event.h>
 #include <ti/sysbios/knl/Queue.h>
 #include <ti/drivers/utils/List.h>
+#include <ti/drivers/ADC.h>
 
 #include <uartlog/UartLog.h>  // Comment out if using xdc Log
 #include <ti/display/AnsiColor.h>
@@ -52,6 +53,19 @@ const uint8_t * SOFTWARE_VERSION =  \
         REL_VERSION_MINOR "."       \
         REL_VERSION_PATCH;
 
+#define MOTION_CALIBRATE_BLINK_PERIOD_MS    (300)
+
+#define MOTION_ADC_MEASURE_SAMPLES          (10)
+// Time from data sheet needed to calibrate the device
+#define MOTION_CALIBRATION_PERIOD_SEC       (2)
+
+// MCU wakeup period to collect data from sensor
+#define MOTION_MEASURE_PERIOD_SEC           (3)
+
+// Time that sensor does not generate new signal once motion detected
+#define MOTION_DETECTION_HOLDON_SEC         (4)
+
+#define MOTION_DETECTION_THRESHOLD_MV       (2000)
 
 /*********************************************************************
  * TYPEDEFS
@@ -98,31 +112,40 @@ static void TamperService_CfgChangeCB(uint16_t connHandle,
                                       uint8_t paramID,
                                       uint16_t len,
                                       uint8_t *pValue);
+static void Motion_handleSmTransit(appEvt_t evt, motionState_t newState);
 
+static void MotionSm_handleEvt(appEvt_t evt);
+static void MotionSm_handleClockEvt();
+
+static void MotionSm_init(void);
+static void MotionSm_disable(void);
+static void MotionSm_measure(void);
+static void MotionSm_checkPrecond(void);
+static void MotionSm_detect(void);
 /*********************************************************************
  * VARIABLES
  */
 static motionState_t motionState = MOTION_INIT;
 static motionSm_t motionSm[] =
 {
- { MOTION_INIT,         EVT_INITIALIZED,    MOTION_WAIT_CONNECT,    NULL},
+ { MOTION_INIT,     EVT_INIT_DONE,      MOTION_CALIBRATE,MotionSm_init         },
 
- { MOTION_WAIT_CONNECT, EVT_CONN,           MOTION_DISABLED,        NULL},
- { MOTION_WAIT_CONNECT, EVT_CONN,           MOTION_CALIBRATE,       NULL},
+ { MOTION_CALIBRATE,EVT_CHECK_PRECOND,  MOTION_DISABLE, MotionSm_checkPrecond  },
+ { MOTION_CALIBRATE,EVT_DISABLE,        MOTION_DISABLE, MotionSm_disable       },
+ { MOTION_CALIBRATE,EVT_MEASURE,        MOTION_MEASURE, MotionSm_measure       },
 
- { MOTION_CALIBRATE,    NULL,   MOTION_MEASURE,     NULL },
- { MOTION_CALIBRATE,    NULL,   MOTION_DISABLED,    NULL },
-// { MOTION_CALIBRATE,    NULL,   MOTION_CALIBRATE,   NULL },
+ { MOTION_DISABLE,  EVT_SERVICE_CFG,    MOTION_DISABLE, MotionSm_checkPrecond  },
+ { MOTION_DISABLE,  EVT_MEASURE,        MOTION_MEASURE, MotionSm_measure       },
 
- { MOTION_DISABLED,     NULL,               MOTION_MEASURE,     NULL },
+ { MOTION_MEASURE,  EVT_SERVICE_CFG,    MOTION_MEASURE, MotionSm_checkPrecond  },
+ { MOTION_MEASURE,  EVT_DISCONN,        MOTION_DISABLE, MotionSm_disable       },
+ { MOTION_MEASURE,  EVT_DETECT,         MOTION_DETECT,  MotionSm_detect        },
+ { MOTION_MEASURE,  EVT_DISABLE,        MOTION_DISABLE, MotionSm_disable       },
 
- { MOTION_MEASURE,      NULL,               MOTION_DETECT,      NULL },
- { MOTION_MEASURE,      NULL,               MOTION_MEASURE,     NULL },
- { MOTION_MEASURE,      NULL,               MOTION_DISABLED,    NULL },
-
- { MOTION_DETECT,       NULL,               MOTION_DETECT,      NULL },
- { MOTION_DETECT,       NULL,               MOTION_MEASURE,     NULL },
- { MOTION_DETECT,       NULL,               MOTION_DISABLED,    NULL },
+ { MOTION_DETECT,   EVT_SERVICE_CFG,    MOTION_DETECT,  MotionSm_checkPrecond  },
+ { MOTION_DETECT,   EVT_DISCONN,        MOTION_DISABLE, MotionSm_disable       },
+ { MOTION_DETECT,   EVT_MEASURE,        MOTION_MEASURE, MotionSm_measure       },
+ { MOTION_DETECT,   EVT_DISABLE,        MOTION_DISABLE, MotionSm_disable       }
 };
 
 /*
@@ -158,17 +181,23 @@ static TamperServiceCBs_t Tamper_ServiceCBs =
 static PIN_Handle buttonPinHandle;
 /* Global memory storage for a PIN_Config table */
 static PIN_State buttonPinState;
+
+// Clock objects for debouncing the buttons
+static Clock_Struct motionClock;
+static Clock_Handle motionClockHandle;
 /*
  * Application button pin configuration table:
  *   - Buttons interrupts are configured to trigger on falling edge.
  */
-PIN_Config buttonPinTable[] = {
+static PIN_Config buttonPinTable[] = {
     Board_PIN_BUTTON1 | PIN_INPUT_EN | PIN_PULLUP | PIN_IRQ_NEGEDGE,
     PIN_TERMINATE
 };
 
 // Clock objects for debouncing the buttons
 static Clock_Struct button1DebounceClock;
+
+
 
 /*********************************************************************
  * FUNCTIONS
@@ -185,6 +214,8 @@ void CustomDevice_hardwareInit(void)
         Log_error0("Error initializing button pins");
         Task_exit();
     }
+
+
 
     Tamper_init(TAMPER_PIN);
     Led_init();
@@ -662,6 +693,12 @@ void CustomDevice_processApplicationMessage(Msg_t *pMsg)
             break;
         }
 
+        case EVT_MOTION_CLK:
+        {
+            MotionSm_handleClockEvt();
+            break;
+        }
+
         case EVT_SERVICE_CFG: /* Message about received CCCD write */
             /* Call different handler per service */
             switch(pCharData->svcUUID)
@@ -687,6 +724,120 @@ void CustomDevice_processApplicationMessage(Msg_t *pMsg)
             }
             break;
     }
+
+    MotionSm_handleEvt(pMsg->event);
+}
+
+static void MotionSm_handleEvt(appEvt_t evt)
+{
+    motionHandlerFunc_t handler;
+    for(uint8_t i = 0; i < sizeof(motionSm) / sizeof(motionSm[0]); i++)
+    {
+        if(motionSm[i].evt == evt && motionSm[i].from == motionState)
+        {
+            if ((handler = motionSm[i].func) != NULL)
+            {
+                Log_info3("%s: transition %d -> %d", (uintptr_t)__func__,
+                          motionState,
+                          motionSm[i].to);
+                handler();
+                motionState = motionSm[i].to;
+            }
+        }
+    }
+}
+
+static void Motion_swiFxn()
+{
+    VOID enqueueMsg(EVT_MOTION_CLK, NULL);
+}
+
+static void MotionSm_handleClockEvt()
+{
+    switch (motionState) {
+        case MOTION_CALIBRATE:
+        { /* Calibration finished */
+            Util_stopClock(&motionClock);
+            Led_off();
+
+            // check connection and configuration
+            enqueueMsg(EVT_CHECK_PRECOND, NULL) ;
+            break;
+        }
+
+        case MOTION_MEASURE:
+        {
+            Util_startClock(&motionClock);
+            enqueueMsg(EVT_MEASURE, NULL);
+            break;
+        }
+
+        case MOTION_DETECT:
+        {
+            enqueueMsg(EVT_MEASURE, NULL);
+            break;
+        }
+
+        default:
+            break;
+    }
+}
+
+static void MotionSm_init(void)
+{
+    // TODO: optimize clock handles
+    motionClockHandle = Util_constructClock(&motionClock,
+                                            Motion_swiFxn, 500,
+                                            0, 0, 0);
+    // start calibration here
+    Util_restartClock(&motionClock, 1000 * MOTION_CALIBRATION_PERIOD_SEC);
+    Led_blink(MOTION_CALIBRATE_BLINK_PERIOD_MS);
+}
+
+static void MotionSm_checkPrecond(void)
+{
+    // check to enable/disable the feature if it's disabled/enabled respectively
+    uint8_t detectionEnabled = 1;
+
+    enqueueMsg(detectionEnabled ? EVT_CALIBRATE : EVT_DISABLE, NULL);
+}
+
+static void MotionSm_disable(void)
+{
+    // stop everything
+    Util_stopClock(&motionClock);
+    Led_off();
+}
+
+static void MotionSm_measure(void)
+{
+    // measure and start clock
+    uint32_t microVolt = Adc_readMedianBySamples(MOTION_ADC_MEASURE_SAMPLES);
+
+    if (microVolt >= MOTION_DETECTION_THRESHOLD_MV)
+    {
+        Util_stopClock(&motionClock);
+        enqueueMsg(EVT_DETECT, NULL);
+    }
+    else
+    { // motion not detected, keep measuring
+        // TODO: set correct service
+        uint8_t val = 0;
+        DataService_SetParameter(CS_STATE_ID, 1, &val);
+        Util_startClock(&motionClock);
+        Led_off();
+    }
+}
+
+static void MotionSm_detect(void)
+{
+    // lid the LED and start detection clock, send notification
+    Led_on();
+    Util_restartClock(&motionClock, MOTION_DETECTION_HOLDON_SEC * 1000);
+
+    // TODO: set correct service
+    uint8_t val = DS_TRIGGERED;
+    DataService_SetParameter(CS_STATE_ID, 1, &val);
 }
 
 #endif

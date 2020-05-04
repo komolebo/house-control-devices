@@ -63,8 +63,15 @@ typedef enum
     EVT_CONN,               /* Connection Event End notice                 */
     EVT_TAMPER_CHANGED,     /* Tamper button state changed                 */
     EVT_LED_CLK,            /* LED blinking clock event                    */
+    EVT_MOTION_CLK,         /* Motion timer expiration clock event         */
     // to handle later:
-    EVT_INITIALIZED,
+    EVT_INIT_DONE,
+    EVT_CHECK_PRECOND,
+    EVT_DISCONN,
+    EVT_DISABLE,
+    EVT_CALIBRATE,
+    EVT_MEASURE,
+    EVT_DETECT,
 } appEvt_t;
 
 typedef enum

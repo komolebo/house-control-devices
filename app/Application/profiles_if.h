@@ -97,6 +97,9 @@
 #define LED_MODE_DISABLE                (0)
 #define LED_MODE_ENABLE                 (1)
 
+#define DS_TRIGGERED                    (1)
+#define DS_NOT_TRIGGERED                (0)
+
 /*********************************************************************
  * MACROS
  */
