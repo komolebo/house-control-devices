@@ -45,12 +45,6 @@ CONST uint8_t ConfigServiceUUID[ATT_UUID_SIZE] =
     BASE128_FROM_UINT16(CONFIG_SERVICE_SERV_UUID)
 };
 
-// Config state UUID
-CONST uint8_t cs_StateUUID[ATT_UUID_SIZE] =
-{
-    BASE128_FROM_UINT16(CS_STATE_UUID)
-};
-
 // Config mode UUID
 CONST uint8_t cs_ModeUUID[ATT_UUID_SIZE] =
 {
@@ -82,15 +76,6 @@ static uint8_t cs_icall_rsp_task_id = INVALID_TASK_ID;
 
 // Service declaration
 static CONST gattAttrType_t DataServiceDecl = { ATT_UUID_SIZE, ConfigServiceUUID };
-
-// Characteristic "State" Properties (for declaration)
-static uint8_t cs_StateProps = GATT_PROP_READ | GATT_PROP_WRITE;
-
-// Characteristic "State" Value variable
-static uint8_t cs_StateVal[CS_STATE_LEN] = { DEVICE_STATE_ENABLED };
-
-// Length of data in characteristic "State" Value variable
-static uint16_t cs_StateValLen = CS_STATE_LEN;
 
 // Characteristic "Mode" Properties (for declaration)
 static uint8_t cs_ModeProps = GATT_PROP_READ | GATT_PROP_WRITE;
@@ -132,20 +117,6 @@ static gattAttribute_t Config_ServiceAttrTbl[] =
         0,
         (uint8_t *)&DataServiceDecl
     },
-        // State Characteristic Declaration
-        {
-            { ATT_BT_UUID_SIZE, characterUUID },
-            GATT_PERMIT_READ,
-            0,
-            &cs_StateProps
-        },
-            // Characteristic Value
-            {
-                { ATT_UUID_SIZE, cs_StateUUID },
-                GATT_PERMIT_READ | GATT_PERMIT_WRITE,
-                0,
-                cs_StateVal
-            },
         // Mode Characteristic Declaration
         {
             { ATT_BT_UUID_SIZE, characterUUID },
@@ -231,17 +202,6 @@ CONST gattServiceCBs_t Config_ServiceCBs =
 extern bStatus_t ConfigService_AddService(uint8_t rspTaskId)
 {
     uint8_t status;
-#if 0
-    // Allocate Client Characteristic Configuration table
-    cs_StateConfig = (gattCharCfg_t *)ICall_malloc(
-        sizeof(gattCharCfg_t) * linkDBNumConns);
-    if(cs_StateConfig == NULL)
-    {
-        return(bleMemAllocError);
-    }
-    // Initialize Client Characteristic Configuration attributes
-    GATTServApp_InitCharCfg(CONNHANDLE_INVALID, cs_StateConfig);
-#endif
 
     // Register GATT attribute list and CBs with GATT Server App
     status = GATTServApp_RegisterService(Config_ServiceAttrTbl,
@@ -300,14 +260,6 @@ bStatus_t ConfigService_SetParameter(uint8_t param, uint16_t len, void *value)
 
     switch(param)
     {
-    case CS_STATE_ID:
-        pAttrVal = cs_StateVal;
-        pValLen = &cs_StateValLen;
-        valLen = CS_STATE_LEN;
-        needAuth = FALSE;  // Change if authenticated link is required for sending.
-        Log_info2("SetParameter : %s len: %d", (uintptr_t)"State", len);
-        break;
-
     case CS_MODE_ID:
         pAttrVal = cs_ModeVal;
         pValLen = &cs_ModeValLen;
@@ -378,12 +330,6 @@ bStatus_t ConfigService_GetParameter(uint8_t param, uint16_t *len, void *value)
     bStatus_t ret = SUCCESS;
     switch(param)
     {
-    case CS_STATE_ID:
-        memcpy(value, cs_StateVal, *len);
-        Log_info2("GetParameter : %s returning %d ", (uintptr_t)"State",
-                  *(uint8_t*)value);
-        break;
-
     case CS_MODE_ID:
         memcpy(value, cs_ModeVal, *len);
         Log_info2("GetParameter : %s returning %d", (uintptr_t)"Mode",
@@ -430,12 +376,6 @@ static uint8_t Config_Service_findCharParamId(gattAttribute_t *pAttr)
        *(uint16_t *)pAttr->type.uuid)
     {
         return(Config_Service_findCharParamId(pAttr - 1)); // Assume the value attribute precedes CCCD and recurse
-    }
-    // Is this attribute "State"
-    else if(ATT_UUID_SIZE == pAttr->type.len &&
-            !memcmp(pAttr->type.uuid, cs_StateUUID, pAttr->type.len))
-    {
-        return(CS_STATE_ID);
     }
     // Is this attribute in "Mode"?
     else if(ATT_UUID_SIZE == pAttr->type.len &&
@@ -491,17 +431,6 @@ static bStatus_t Config_Service_ReadAttrCB(uint16_t connHandle,
     paramID = Config_Service_findCharParamId(pAttr);
     switch(paramID)
     {
-    case CS_STATE_ID:
-        valueLen = cs_StateValLen;
-
-        Log_info4("ReadAttrCB : %s connHandle: %d offset: %d method: 0x%02x",
-                  (uintptr_t)"State",
-                  connHandle,
-                  offset,
-                  method);
-        /* Other considerations for String can be inserted here */
-        break;
-
     case CS_MODE_ID:
         valueLen = cs_ModeValLen;
 
@@ -610,20 +539,6 @@ static bStatus_t Config_Service_WriteAttrCB(uint16_t connHandle,
     paramID = Config_Service_findCharParamId(pAttr);
     switch(paramID)
     {
-    case CS_STATE_ID:
-        writeLen = CS_STATE_LEN;
-        pValueLenVar = &cs_StateValLen;
-
-        Log_info5(
-            "WriteAttrCB : %s connHandle(%d) len(%d) offset(%d) method(0x%02x)",
-            (uintptr_t)"String",
-            connHandle,
-            len,
-            offset,
-            method);
-        /* Other considerations for String can be inserted here */
-        break;
-
     case CS_MODE_ID:
         writeLen = CS_MODE_LEN;
         pValueLenVar = &cs_ModeValLen;

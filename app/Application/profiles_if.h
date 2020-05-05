@@ -46,16 +46,21 @@
 #define BS_BUTTON1_LEN_MIN            1
 
 // String Characteristic defines
+#define DS_STATE_ID                  0
+#define DS_STATE_UUID                0x1131
+#define DS_STATE_LEN                 1
+#define DS_STATE_LEN_MIN             1
+#if o
 #define DS_STRING_ID                 0
 #define DS_STRING_UUID               0x1131
 #define DS_STRING_LEN                40
 #define DS_STRING_LEN_MIN            0
-
 // Stream Characteristic defines
 #define DS_STREAM_ID                 1
 #define DS_STREAM_UUID               0x1132
 #define DS_STREAM_LEN                20
 #define DS_STREAM_LEN_MIN            0
+#endif
 
 // State Characteristic defines
 #define CS_STATE_ID                  0

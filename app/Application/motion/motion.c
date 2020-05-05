@@ -61,7 +61,7 @@ const uint8_t * SOFTWARE_VERSION =  \
 #define MOTION_CALIBRATION_PERIOD_SEC       (6)
 
 // MCU wakeup period to collect data from sensor
-#define MOTION_MEASURE_PERIOD_SEC           (2)
+#define MOTION_MEASURE_PERIOD_SEC           (0.5)
 
 // Time that sensor does not generate new signal once motion detected
 #define MOTION_DETECTION_HOLDON_SEC         (2)
@@ -109,10 +109,6 @@ static void DataService_CfgChangeCB(uint16_t connHandle,
                                     uint8_t paramID,
                                     uint16_t len,
                                     uint8_t *pValue);
-static void ConfigService_CfgChangeCB(uint16_t connHandle,
-                                     uint8_t paramID,
-                                     uint16_t len,
-                                     uint8_t *pValue);
 static void TamperService_CfgChangeCB(uint16_t connHandle,
                                       uint8_t paramID,
                                       uint16_t len,
@@ -250,13 +246,14 @@ void CustomDevice_bleInit(uint8_t selfEntity)
     ConfigService_RegisterAppCBs(&Config_ServiceCBs);
     TamperService_RegisterAppCBs(&Tamper_ServiceCBs);
 
+#if 0
     // Placeholder variable for characteristic intialization
     uint8_t initVal[40] = {0};
     uint8_t initString[] = "This is a pretty long string, isn't it!";
-
     // Initalization of characteristics in Data_Service that can provide data.
     DataService_SetParameter(DS_STRING_ID, sizeof(initString), initString);
     DataService_SetParameter(DS_STREAM_ID, DS_STREAM_LEN, initVal);
+#endif
 }
 
 /*
@@ -354,10 +351,30 @@ void DataService_ValueChangeHandler(
 {
     // Value to hold the received string for printing via Log, as Log printouts
     // happen in the Idle task, and so need to refer to a global/static variable.
+#if 0
     static uint8_t received_string[DS_STRING_LEN] = {0};
+#endif
 
     switch(pCharData->paramID)
     {
+    case DS_STATE_ID:
+    {
+        // Do something useful with pCharData->data here
+        // -------------------------
+        // Copy received data to holder array, ensuring NULL termination.
+        uint8_t received_val;
+        memset(&received_val, 0, DS_STATE_LEN);
+        memcpy(&received_val, pCharData->data, DS_STATE_LEN);
+        // Needed to copy before log statement, as the holder array remains after
+        // the pCharData message has been freed and reused for something else.
+        Log_info3("Value Change msg: %s %s: %d",
+                  (uintptr_t)"Data Service",
+                  (uintptr_t)"State",
+                  received_val);
+        break;
+    }
+
+#if 0
     case DS_STRING_ID:
         // Do something useful with pCharData->data here
         // -------------------------
@@ -381,7 +398,7 @@ void DataService_ValueChangeHandler(
         // -------------------------
         // Do something useful with pCharData->data here
         break;
-
+#endif
     default:
         return;
     }
@@ -472,6 +489,17 @@ void DataService_CfgChangeHandler(CharacteristicData_t *pCharData)
 
     switch(pCharData->paramID)
     {
+    case DS_STATE_ID:
+            Log_info3("CCCD Change msg: %s %s: %s",
+                      (uintptr_t)"Data Service",
+                      (uintptr_t)"State",
+                      (uintptr_t)configValString);
+            // -------------------------
+            // Do something useful with configValue here. It tells you whether someone
+            // wants to know the state of this characteristic.
+            // ...
+            break;
+#if 0
     case DS_STREAM_ID:
         Log_info3("CCCD Change msg: %s %s: %s",
                   (uintptr_t)"Data Service",
@@ -482,6 +510,7 @@ void DataService_CfgChangeHandler(CharacteristicData_t *pCharData)
         // wants to know the state of this characteristic.
         // ...
         break;
+#endif
     }
 }
 
@@ -846,7 +875,7 @@ static void MotionSm_measure(void)
     { // motion not detected, keep measuring
         // TODO: set correct service
         uint8_t val = 0;
-        DataService_SetParameter(CS_STATE_ID, 1, &val);
+        DataService_SetParameter(DS_STATE_ID, 1, &val);
         Util_startClock(&motionClock);
         Led_off();
     }
@@ -862,7 +891,7 @@ static void MotionSm_detect(void)
 
     // TODO: set correct service
     uint8_t val = DS_TRIGGERED;
-    DataService_SetParameter(CS_STATE_ID, 1, &val);
+    DataService_SetParameter(DS_STATE_ID, 1, &val);
 }
 
 #endif
