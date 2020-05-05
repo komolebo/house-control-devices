@@ -28,7 +28,7 @@ void Adc_init(void)
     }
 }
 
-uint32_t Adc_readMedianBySamples(uint8_t samples)
+uint32_t Adc_readMedianFromSamples(uint8_t samples)
 {
     /* Blocking mode conversion */
     int_fast16_t res;

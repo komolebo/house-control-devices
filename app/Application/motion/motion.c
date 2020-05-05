@@ -14,12 +14,12 @@
 #include <services/config_service.h>
 #include <services/data_service.h>
 #include <services/tamper_service.h>
-#include <devinfoservice.h>
 #include <device_common.h>
 #include <icall.h>
 #include <icall_ble_api.h>
 #include "features/tamper.h"
 #include "features/led.h"
+#include "features/adc.h"
 
 #include <ti/sysbios/knl/Task.h>
 #include <ti/sysbios/knl/Clock.h>
@@ -34,6 +34,7 @@
 #include <string.h>
 
 #include <util.h>
+#include <devinfoservice.h>
 /*********************************************************************
  * MACROS
  */
@@ -112,8 +113,6 @@ static void TamperService_CfgChangeCB(uint16_t connHandle,
                                       uint8_t paramID,
                                       uint16_t len,
                                       uint8_t *pValue);
-static void Motion_handleSmTransit(appEvt_t evt, motionState_t newState);
-
 static void MotionSm_handleEvt(appEvt_t evt);
 static void MotionSm_handleClockEvt();
 
@@ -184,7 +183,10 @@ static PIN_State buttonPinState;
 
 // Clock objects for debouncing the buttons
 static Clock_Struct motionClock;
+
+#if 0
 static Clock_Handle motionClockHandle;
+#endif
 /*
  * Application button pin configuration table:
  *   - Buttons interrupts are configured to trigger on falling edge.
@@ -725,7 +727,7 @@ void CustomDevice_processApplicationMessage(Msg_t *pMsg)
             break;
     }
 
-    MotionSm_handleEvt(pMsg->event);
+    MotionSm_handleEvt((appEvt_t)pMsg->event);
 }
 
 static void MotionSm_handleEvt(appEvt_t evt)
@@ -747,8 +749,9 @@ static void MotionSm_handleEvt(appEvt_t evt)
     }
 }
 
-static void Motion_swiFxn()
+static void Motion_swiFxn(UArg arg)
 {
+    VOID arg;
     VOID enqueueMsg(EVT_MOTION_CLK, NULL);
 }
 
@@ -786,9 +789,10 @@ static void MotionSm_handleClockEvt()
 static void MotionSm_init(void)
 {
     // TODO: optimize clock handles
-    motionClockHandle = Util_constructClock(&motionClock,
-                                            Motion_swiFxn, 500,
-                                            0, 0, 0);
+    /*motionClockHandle = */
+    VOID Util_constructClock(&motionClock,
+                            Motion_swiFxn, 500,
+                            0, 0, 0);
     // start calibration here
     Util_restartClock(&motionClock, 1000 * MOTION_CALIBRATION_PERIOD_SEC);
     Led_blink(MOTION_CALIBRATE_BLINK_PERIOD_MS);
@@ -812,7 +816,7 @@ static void MotionSm_disable(void)
 static void MotionSm_measure(void)
 {
     // measure and start clock
-    uint32_t microVolt = Adc_readMedianBySamples(MOTION_ADC_MEASURE_SAMPLES);
+    uint32_t microVolt = Adc_readMedianFromSamples(MOTION_ADC_MEASURE_SAMPLES);
 
     if (microVolt >= MOTION_DETECTION_THRESHOLD_MV)
     {
