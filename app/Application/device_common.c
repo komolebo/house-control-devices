@@ -19,11 +19,11 @@ const uint8_t DevicesName[DEVICE_COUNT][DEVINFO_STR_ATTR_LEN] =
 
 
 /*********************************************************************
- * @fn     project_zero_spin
+ * @fn     spinIndefinitely
  *
  * @brief   Spin forever
  */
-void project_zero_spin(void)
+void spinIndefinitely(void)
 {
   volatile uint8_t x = 0;;
 
@@ -83,13 +83,13 @@ char * util_arrtohex(uint8_t const *src, uint8_t src_len,
 }
 
 /*********************************************************************
- * @fn      ProjectZero_handleUpdateLinkEvent
+ * @fn      handleUpdateLinkEvent
  *
  * @brief   Receive and parse a parameter update that has occurred.
  *
  * @param   pEvt - pointer to stack event message
  */
-void ProjectZero_handleUpdateLinkEvent(gapLinkUpdateEvent_t *pEvt)
+void handleUpdateLinkEvent(gapLinkUpdateEvent_t *pEvt)
 {
     // Get the address from the connection handle
     linkDBInfo_t linkInfo;
@@ -123,7 +123,7 @@ void ProjectZero_handleUpdateLinkEvent(gapLinkUpdateEvent_t *pEvt)
     if(connHandleEntry != NULL)
     {
         // Attempt to send queued update now
-        ProjectZero_sendParamUpdate(*(connHandleEntry->connHandle));
+        sendParamUpdate(*(connHandleEntry->connHandle));
 
         // Free list element
         ICall_free(connHandleEntry->connHandle);
@@ -132,13 +132,13 @@ void ProjectZero_handleUpdateLinkEvent(gapLinkUpdateEvent_t *pEvt)
 }
 
 /*********************************************************************
- * @fn      ProjectZero_paramUpdClockHandler
+ * @fn      paramUpdClockHandler
  *
  * @brief   Handler function for clock timeouts.
  *
  * @param   arg - app message pointer
  */
-void ProjectZero_paramUpdClockHandler(UArg arg)
+void paramUpdClockHandler(UArg arg)
 {
     SendParamReq_t *req =
         (SendParamReq_t *)ICall_malloc(sizeof(SendParamReq_t));
@@ -153,7 +153,7 @@ void ProjectZero_paramUpdClockHandler(UArg arg)
 }
 
 /*********************************************************************
- * @fn      ProjectZero_addConn
+ * @fn      addConn
  *
  * @brief   Add a device to the connected device list
  *
@@ -161,7 +161,7 @@ void ProjectZero_paramUpdClockHandler(UArg arg)
  *
  * @return  bleMemAllocError if a param update event could not be sent. Else SUCCESS.
  */
-uint8_t ProjectZero_addConn(uint16_t connHandle)
+uint8_t addConn(uint16_t connHandle)
 {
     uint8_t i;
     uint8_t status = bleNoResources;
@@ -181,7 +181,7 @@ uint8_t ProjectZero_addConn(uint16_t connHandle)
             if (connList[i].pUpdateClock)
             {
               Util_constructClock(connList[i].pUpdateClock,
-                                  ProjectZero_paramUpdClockHandler,
+                                  paramUpdClockHandler,
                                   PZ_SEND_PARAM_UPDATE_DELAY, 0, true,
                                   (uintptr_t)connHandle);
             }
@@ -197,7 +197,7 @@ uint8_t ProjectZero_addConn(uint16_t connHandle)
 }
 
 /*********************************************************************
- * @fn      ProjectZero_getConnIndex
+ * @fn      getConnIndex
  *
  * @brief   Find index in the connected device list by connHandle
  *
@@ -206,7 +206,7 @@ uint8_t ProjectZero_addConn(uint16_t connHandle)
  * @return  the index of the entry that has the given connection handle.
  *          if there is no match, MAX_NUM_BLE_CONNS will be returned.
  */
-uint8_t ProjectZero_getConnIndex(uint16_t connHandle)
+uint8_t getConnIndex(uint16_t connHandle)
 {
     uint8_t i;
 
@@ -240,7 +240,7 @@ uint8_t clearConnListEntry(uint16_t connHandle)
     if(connHandle != CONNHANDLE_ALL)
     {
         // Get connection index from handle
-        connIndex = ProjectZero_getConnIndex(connHandle);
+        connIndex = getConnIndex(connHandle);
         if(connIndex >= MAX_NUM_BLE_CONNS)
         {
             return(bleInvalidRange);
@@ -264,7 +264,7 @@ uint8_t clearConnListEntry(uint16_t connHandle)
 }
 
 /*********************************************************************
- * @fn      ProjectZero_removeConn
+ * @fn      removeConn
  *
  * @brief   Remove a device from the connected device list
  *
@@ -274,9 +274,9 @@ uint8_t clearConnListEntry(uint16_t connHandle)
  *          info is removed from.
  *          if connHandle is not found, MAX_NUM_BLE_CONNS will be returned.
  */
-uint8_t ProjectZero_removeConn(uint16_t connHandle)
+uint8_t removeConn(uint16_t connHandle)
 {
-    uint8_t connIndex = ProjectZero_getConnIndex(connHandle);
+    uint8_t connIndex = getConnIndex(connHandle);
 
     if(connIndex < MAX_NUM_BLE_CONNS)
     {
@@ -303,13 +303,13 @@ uint8_t ProjectZero_removeConn(uint16_t connHandle)
 }
 
 /*********************************************************************
- * @fn      ProjectZero_sendParamUpdate
+ * @fn      sendParamUpdate
  *
  * @brief   Remove a device from the connected device list
  *
  * @param   connHandle - connection handle
  */
-void ProjectZero_sendParamUpdate(uint16_t connHandle)
+void sendParamUpdate(uint16_t connHandle)
 {
     gapUpdateLinkParamReq_t req;
     uint8_t connIndex;
@@ -320,7 +320,7 @@ void ProjectZero_sendParamUpdate(uint16_t connHandle)
     req.intervalMin = DEFAULT_DESIRED_MIN_CONN_INTERVAL;
     req.intervalMax = DEFAULT_DESIRED_MAX_CONN_INTERVAL;
 
-    connIndex = ProjectZero_getConnIndex(connHandle);
+    connIndex = getConnIndex(connHandle);
     APP_ASSERT(connIndex < MAX_NUM_BLE_CONNS);
 
     // Deconstruct the clock object
@@ -352,14 +352,14 @@ void ProjectZero_sendParamUpdate(uint16_t connHandle)
 }
 
 /*********************************************************************
- * @fn      ProjectZero_updatePHYStat
+ * @fn      updatePHYStat
  *
  * @brief   Update the auto phy update state machine
  *
  * @param   eventCode - HCI LE Event code
  *          pMsg - message to process
  */
-void ProjectZero_updatePHYStat(uint16_t eventCode, uint8_t *pMsg)
+void updatePHYStat(uint16_t eventCode, uint8_t *pMsg)
 {
     uint8_t connIndex;
     pzConnHandleEntry_t *connHandleEntry;
@@ -374,7 +374,7 @@ void ProjectZero_updatePHYStat(uint16_t eventCode, uint8_t *pMsg)
         if(connHandleEntry)
         {
             // Get index from connection handle
-            connIndex = ProjectZero_getConnIndex(*(connHandleEntry->connHandle));
+            connIndex = getConnIndex(*(connHandleEntry->connHandle));
             APP_ASSERT(connIndex < MAX_NUM_BLE_CONNS);
 
             ICall_free(connHandleEntry->connHandle);
@@ -401,7 +401,7 @@ void ProjectZero_updatePHYStat(uint16_t eventCode, uint8_t *pMsg)
         if(pPUC)
         {
             // Get index from connection handle
-            uint8_t index = ProjectZero_getConnIndex(pPUC->connHandle);
+            uint8_t index = getConnIndex(pPUC->connHandle);
             APP_ASSERT(index < MAX_NUM_BLE_CONNS);
 
             // Update the phychange request status for active RSSI tracking connection

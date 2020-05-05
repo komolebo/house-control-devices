@@ -622,7 +622,7 @@ static void BaseDevice_processApplicationMessage(Msg_t *pMsg)
       {
           // Send connection parameter update
           SendParamReq_t* req = (SendParamReq_t *)pMsg->pData;
-          ProjectZero_sendParamUpdate(req->connHandle);
+          sendParamUpdate(req->connHandle);
       }
       break;
 
@@ -761,7 +761,7 @@ static void BaseDevice_processGapMessage(gapEventHdr_t *pMsg)
         if(pPkt->hdr.status == SUCCESS)
         {
             // Add connection to list
-            ProjectZero_addConn(pPkt->connectionHandle);
+            addConn(pPkt->connectionHandle);
 
             // Display the address of this connection
             static uint8_t addrStr[3 * B_ADDR_LEN + 1];
@@ -794,7 +794,7 @@ static void BaseDevice_processGapMessage(gapEventHdr_t *pMsg)
         Log_info1("Num Conns: %d", linkDB_NumActive());
 
         // Remove the connection from the list and disable RSSI if needed
-        ProjectZero_removeConn(pPkt->connectionHandle);
+        removeConn(pPkt->connectionHandle);
 
         // GapAdv_enable will return success only if the maximum number of connections 
 		// has been reached, and adv was not re-enable in GAP_LINK_ESTABLISHED_EVENT
@@ -815,7 +815,7 @@ static void BaseDevice_processGapMessage(gapEventHdr_t *pMsg)
         break;
 
     case GAP_LINK_PARAM_UPDATE_EVENT:
-        ProjectZero_handleUpdateLinkEvent((gapLinkUpdateEvent_t *)pMsg);
+        handleUpdateLinkEvent((gapLinkUpdateEvent_t *)pMsg);
         break;
 
     case GAP_PAIRING_REQ_EVENT:
@@ -866,7 +866,7 @@ void ProjectZero_processHCIMsg(ICall_HciExtEvt *pEvt)
                           pMyMsg->cmdStatus);
             }
 
-            ProjectZero_updatePHYStat(HCI_LE_SET_PHY, (uint8_t *)pMsg);
+            updatePHYStat(HCI_LE_SET_PHY, (uint8_t *)pMsg);
         }
         break;
 
@@ -899,7 +899,7 @@ void ProjectZero_processHCIMsg(ICall_HciExtEvt *pEvt)
                                       (pPUC->rxPhy == PHY_UPDATE_COMPLETE_EVENT_CODED) ? "CODED" : "Unexpected PHY Value"));
             }
 
-            ProjectZero_updatePHYStat(HCI_BLE_PHY_UPDATE_COMPLETE_EVENT,
+            updatePHYStat(HCI_BLE_PHY_UPDATE_COMPLETE_EVENT,
                                       (uint8_t *)pMsg);
         }
     }

@@ -48,7 +48,7 @@
 #define PZ_SEND_PARAM_UPDATE_DELAY            6000
 
 // Spin if the expression is not true
-#define APP_ASSERT(expr) if(!(expr)) {project_zero_spin();}
+#define APP_ASSERT(expr) if(!(expr)) {spinIndefinitely();}
 
 
 /*********************************************************************
@@ -213,7 +213,7 @@ extern status_t enqueueMsg(uint8_t event, void *pData);
 /*********************************************************************
  * FUNCTIONS
  */
-void project_zero_spin(void);
+void spinIndefinitely(void);
 char * util_arrtohex(uint8_t const *src,
                      uint8_t src_len,
                      uint8_t       *dst,
@@ -221,14 +221,14 @@ char * util_arrtohex(uint8_t const *src,
                      uint8_t reverse);
 
 /* Connection handling functions */
-uint8_t ProjectZero_getConnIndex(uint16_t connHandle);
+uint8_t getConnIndex(uint16_t connHandle);
 uint8_t clearConnListEntry(uint16_t connHandle);
-uint8_t ProjectZero_addConn(uint16_t connHandle);
-uint8_t ProjectZero_removeConn(uint16_t connHandle);
-void ProjectZero_sendParamUpdate(uint16_t connHandle);
-void ProjectZero_updatePHYStat(uint16_t eventCode, uint8_t *pMsg);
-void ProjectZero_paramUpdClockHandler(UArg arg);
-void ProjectZero_paramUpdClockHandler(UArg arg);
-void ProjectZero_handleUpdateLinkEvent(gapLinkUpdateEvent_t *pEvt);
+uint8_t addConn(uint16_t connHandle);
+uint8_t removeConn(uint16_t connHandle);
+void sendParamUpdate(uint16_t connHandle);
+void updatePHYStat(uint16_t eventCode, uint8_t *pMsg);
+void paramUpdClockHandler(UArg arg);
+void paramUpdClockHandler(UArg arg);
+void handleUpdateLinkEvent(gapLinkUpdateEvent_t *pEvt);
 
 #endif /* APPLICATION_DEVICE_COMMON_H_ */
