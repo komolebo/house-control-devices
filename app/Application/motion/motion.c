@@ -26,7 +26,7 @@
 #include <ti/sysbios/knl/Event.h>
 #include <ti/sysbios/knl/Queue.h>
 #include <ti/drivers/utils/List.h>
-#include <ti/drivers/ADC.h>
+//#include <ti/drivers/ADC.h>
 
 #include <uartlog/UartLog.h>  // Comment out if using xdc Log
 #include <ti/display/AnsiColor.h>
@@ -58,13 +58,13 @@ const uint8_t * SOFTWARE_VERSION =  \
 
 #define MOTION_ADC_MEASURE_SAMPLES          (10)
 // Time from data sheet needed to calibrate the device
-#define MOTION_CALIBRATION_PERIOD_SEC       (2)
+#define MOTION_CALIBRATION_PERIOD_SEC       (6)
 
 // MCU wakeup period to collect data from sensor
-#define MOTION_MEASURE_PERIOD_SEC           (3)
+#define MOTION_MEASURE_PERIOD_SEC           (2)
 
 // Time that sensor does not generate new signal once motion detected
-#define MOTION_DETECTION_HOLDON_SEC         (4)
+#define MOTION_DETECTION_HOLDON_SEC         (2)
 
 #define MOTION_DETECTION_THRESHOLD_MV       (2000)
 
@@ -109,6 +109,10 @@ static void DataService_CfgChangeCB(uint16_t connHandle,
                                     uint8_t paramID,
                                     uint16_t len,
                                     uint8_t *pValue);
+static void ConfigService_CfgChangeCB(uint16_t connHandle,
+                                     uint8_t paramID,
+                                     uint16_t len,
+                                     uint8_t *pValue);
 static void TamperService_CfgChangeCB(uint16_t connHandle,
                                       uint8_t paramID,
                                       uint16_t len,
@@ -129,19 +133,21 @@ static motionSm_t motionSm[] =
 {
  { MOTION_INIT,     EVT_INIT_DONE,      MOTION_CALIBRATE,MotionSm_init         },
 
- { MOTION_CALIBRATE,EVT_CHECK_PRECOND,  MOTION_DISABLE, MotionSm_checkPrecond  },
+ { MOTION_CALIBRATE,EVT_CHECK_PRECOND,  MOTION_CALIBRATE,MotionSm_checkPrecond  },
  { MOTION_CALIBRATE,EVT_DISABLE,        MOTION_DISABLE, MotionSm_disable       },
  { MOTION_CALIBRATE,EVT_MEASURE,        MOTION_MEASURE, MotionSm_measure       },
+ { MOTION_MEASURE,  EVT_MEASURE,        MOTION_MEASURE, MotionSm_measure       },
 
- { MOTION_DISABLE,  EVT_SERVICE_CFG,    MOTION_DISABLE, MotionSm_checkPrecond  },
+ { MOTION_DISABLE,  EVT_MODE_CHANGE,    MOTION_DISABLE, MotionSm_checkPrecond  },
+ { MOTION_DISABLE,  EVT_CONN,           MOTION_DISABLE, MotionSm_checkPrecond  },
  { MOTION_DISABLE,  EVT_MEASURE,        MOTION_MEASURE, MotionSm_measure       },
 
- { MOTION_MEASURE,  EVT_SERVICE_CFG,    MOTION_MEASURE, MotionSm_checkPrecond  },
+ { MOTION_MEASURE,  EVT_MODE_CHANGE,    MOTION_MEASURE, MotionSm_checkPrecond  },
  { MOTION_MEASURE,  EVT_DISCONN,        MOTION_DISABLE, MotionSm_disable       },
  { MOTION_MEASURE,  EVT_DETECT,         MOTION_DETECT,  MotionSm_detect        },
  { MOTION_MEASURE,  EVT_DISABLE,        MOTION_DISABLE, MotionSm_disable       },
 
- { MOTION_DETECT,   EVT_SERVICE_CFG,    MOTION_DETECT,  MotionSm_checkPrecond  },
+ { MOTION_DETECT,   EVT_MODE_CHANGE,    MOTION_DETECT,  MotionSm_checkPrecond  },
  { MOTION_DETECT,   EVT_DISCONN,        MOTION_DISABLE, MotionSm_disable       },
  { MOTION_DETECT,   EVT_MEASURE,        MOTION_MEASURE, MotionSm_measure       },
  { MOTION_DETECT,   EVT_DISABLE,        MOTION_DISABLE, MotionSm_disable       }
@@ -218,7 +224,7 @@ void CustomDevice_hardwareInit(void)
     }
 
 
-
+    Adc_init();
     Tamper_init(TAMPER_PIN);
     Led_init();
 }
@@ -268,9 +274,6 @@ static void ProjectZero_updateCharVal(CharacteristicData_t *pCharData)
 {
     switch(pCharData->svcUUID)
     {
-    case BUTTON_SERVICE_SERV_UUID:
-        ButtonService_SetParameter(pCharData->paramID, pCharData->dataLen,
-                                   pCharData->data);
         break;
     }
 }
@@ -428,6 +431,7 @@ void ConfigService_ValueChangeHandler(
                   (uint32_t)received_val);
         // -------------------------
         // Do something useful with pCharData->data here
+        enqueueMsg(EVT_MODE_CHANGE, NULL);
         break;
 
     default:
@@ -757,6 +761,7 @@ static void Motion_swiFxn(UArg arg)
 
 static void MotionSm_handleClockEvt()
 {
+    Log_info0("Motion timer expired");
     switch (motionState) {
         case MOTION_CALIBRATE:
         { /* Calibration finished */
@@ -770,7 +775,8 @@ static void MotionSm_handleClockEvt()
 
         case MOTION_MEASURE:
         {
-            Util_startClock(&motionClock);
+            Util_restartClock(&motionClock,
+                              1000 * MOTION_MEASURE_PERIOD_SEC);
             enqueueMsg(EVT_MEASURE, NULL);
             break;
         }
@@ -788,10 +794,12 @@ static void MotionSm_handleClockEvt()
 
 static void MotionSm_init(void)
 {
+    Log_info1("%s", (uintptr_t)__func__);
     // TODO: optimize clock handles
     /*motionClockHandle = */
     VOID Util_constructClock(&motionClock,
-                            Motion_swiFxn, 500,
+                            Motion_swiFxn,
+                            1000 * MOTION_CALIBRATION_PERIOD_SEC,
                             0, 0, 0);
     // start calibration here
     Util_restartClock(&motionClock, 1000 * MOTION_CALIBRATION_PERIOD_SEC);
@@ -800,14 +808,24 @@ static void MotionSm_init(void)
 
 static void MotionSm_checkPrecond(void)
 {
+    Log_info1("%s", (uintptr_t)__func__);
     // check to enable/disable the feature if it's disabled/enabled respectively
-    uint8_t detectionEnabled = 1;
+    uint8_t connected = 1, configEnabled;
+    uint16_t readLen = 1;
 
-    enqueueMsg(detectionEnabled ? EVT_CALIBRATE : EVT_DISABLE, NULL);
+    connected = isConnected();
+    ConfigService_GetParameter(CS_MODE_ID, &readLen, &configEnabled);
+
+    Log_info3("%s: connected: %d, configuration enabled: %d",
+              (uintptr_t )__func__, connected, configEnabled);
+
+    enqueueMsg((connected && configEnabled) ? EVT_MEASURE : EVT_DISABLE, NULL);
 }
 
 static void MotionSm_disable(void)
 {
+    Log_info1("%s", (uintptr_t)__func__);
+
     // stop everything
     Util_stopClock(&motionClock);
     Led_off();
@@ -815,9 +833,10 @@ static void MotionSm_disable(void)
 
 static void MotionSm_measure(void)
 {
+    Log_info1("%s", (uintptr_t)__func__);
     // measure and start clock
+//#if 0
     uint32_t microVolt = Adc_readMedianFromSamples(MOTION_ADC_MEASURE_SAMPLES);
-
     if (microVolt >= MOTION_DETECTION_THRESHOLD_MV)
     {
         Util_stopClock(&motionClock);
@@ -831,10 +850,12 @@ static void MotionSm_measure(void)
         Util_startClock(&motionClock);
         Led_off();
     }
+//#endif
 }
 
 static void MotionSm_detect(void)
 {
+    Log_info1("%s", (uintptr_t)__func__);
     // lid the LED and start detection clock, send notification
     Led_on();
     Util_restartClock(&motionClock, MOTION_DETECTION_HOLDON_SEC * 1000);

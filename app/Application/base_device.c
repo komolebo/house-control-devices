@@ -610,10 +610,6 @@ static void BaseDevice_processApplicationMessage(Msg_t *pMsg)
 {
     switch(pMsg->event)
     {
-      case HCI_BLE_HARDWARE_ERROR_EVENT_CODE:
-          AssertHandler(HAL_ASSERT_CAUSE_HARDWARE_ERROR,0);
-          break;
-
       case EVT_ADV:
           ProjectZero_processAdvEvent((pzGapAdvEventData_t*)(pMsg->pData));
           break;
@@ -744,6 +740,8 @@ static void BaseDevice_processGapMessage(gapEventHdr_t *pMsg)
                 GapAdv_enable(advHandleLegacy, GAP_ADV_ENABLE_OPTIONS_USE_MAX,
                               0);
             APP_ASSERT(status == SUCCESS);
+
+            enqueueMsg(EVT_INIT_DONE, NULL);
         }
 
         break;
@@ -770,6 +768,7 @@ static void BaseDevice_processGapMessage(gapEventHdr_t *pMsg)
             Log_info1("Connected. Peer address: " \
                         ANSI_COLOR(FG_GREEN)"%s"ANSI_COLOR(ATTR_RESET),
                       (uintptr_t)addrStr);
+            enqueueMsg(EVT_CONN, NULL);
         }
 
         if(linkDB_NumActive() < MAX_NUM_BLE_CONNS)
@@ -795,6 +794,8 @@ static void BaseDevice_processGapMessage(gapEventHdr_t *pMsg)
 
         // Remove the connection from the list and disable RSSI if needed
         removeConn(pPkt->connectionHandle);
+
+        enqueueMsg(EVT_DISCONN, NULL);
 
         // GapAdv_enable will return success only if the maximum number of connections 
 		// has been reached, and adv was not re-enable in GAP_LINK_ESTABLISHED_EVENT

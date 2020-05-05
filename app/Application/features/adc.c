@@ -41,7 +41,7 @@ uint32_t Adc_readMedianFromSamples(uint8_t samples)
 
         if (res == ADC_STATUS_SUCCESS)
         {
-            Log_info2("ADC1 raw result: %d\n, convert result: %d",
+            Log_info2("ADC1 raw result: %d, convert result: %d",
                       adcValue, mVolt);
             minAdcVal = MIN(minAdcVal, adcValue);
             maxAdcVal = MAX(maxAdcVal, adcValue);

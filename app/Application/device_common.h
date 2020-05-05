@@ -48,7 +48,7 @@
 #define PZ_SEND_PARAM_UPDATE_DELAY            6000
 
 // Spin if the expression is not true
-#define APP_ASSERT(expr) if(!(expr)) {spinIndefinitely();}
+#define APP_ASSERT(expr) if(!(expr)) {spinForever();}
 
 
 /*********************************************************************
@@ -128,6 +128,7 @@ typedef enum
     // to handle later:
     EVT_INIT_DONE,
     EVT_CHECK_PRECOND,
+    EVT_MODE_CHANGE,
     EVT_DISCONN,
     EVT_DISABLE,
     EVT_CALIBRATE,
@@ -190,15 +191,6 @@ typedef struct
     uint16_t connHandle;
 } SendParamReq_t;
 
-// Per-handle connection info
-static pzConnRec_t connList[MAX_NUM_BLE_CONNS];
-
-// List to store connection handles for set phy command status's
-static List_List setPhyCommStatList;
-
-// List to store connection handles for queued param updates
-static List_List paramUpdateList;
-
 /*********************************************************************
  *  EXTERNAL VARIABLES
  */
@@ -213,7 +205,7 @@ extern status_t enqueueMsg(uint8_t event, void *pData);
 /*********************************************************************
  * FUNCTIONS
  */
-void spinIndefinitely(void);
+void spinForever(void);
 char * util_arrtohex(uint8_t const *src,
                      uint8_t src_len,
                      uint8_t       *dst,
@@ -221,10 +213,12 @@ char * util_arrtohex(uint8_t const *src,
                      uint8_t reverse);
 
 /* Connection handling functions */
+bool isConnected(void);
 uint8_t getConnIndex(uint16_t connHandle);
 uint8_t clearConnListEntry(uint16_t connHandle);
 uint8_t addConn(uint16_t connHandle);
 uint8_t removeConn(uint16_t connHandle);
+
 void sendParamUpdate(uint16_t connHandle);
 void updatePHYStat(uint16_t eventCode, uint8_t *pMsg);
 void paramUpdClockHandler(UArg arg);

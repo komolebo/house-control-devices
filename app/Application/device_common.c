@@ -17,13 +17,21 @@ const uint8_t DevicesName[DEVICE_COUNT][DEVINFO_STR_ATTR_LEN] =
     [DEVICE_GAS]        = "GAS",
 };
 
+// Per-handle connection info
+static pzConnRec_t connList[MAX_NUM_BLE_CONNS];
+
+// List to store connection handles for set phy command status's
+static List_List setPhyCommStatList;
+
+// List to store connection handles for queued param updates
+static List_List paramUpdateList;
 
 /*********************************************************************
- * @fn     spinIndefinitely
+ * @fn     spinForever
  *
  * @brief   Spin forever
  */
-void spinIndefinitely(void)
+void spinForever(void)
 {
   volatile uint8_t x = 0;;
 
@@ -220,6 +228,32 @@ uint8_t getConnIndex(uint16_t connHandle)
 
     return(MAX_NUM_BLE_CONNS);
 }
+
+/*********************************************************************
+ * @fn      isConnected
+ *
+ * @brief   Find index in the connected device list by connHandle
+ *
+ * @param   connHandle - connection handle
+ *
+ * @return  TRUE if connected to central.
+ *          TRUE if disconnected from central.
+ */
+bool isConnected(void)
+{
+    uint8_t i;
+
+    for(i = 0; i < MAX_NUM_BLE_CONNS; i++)
+    {
+        if(connList[i].connHandle != CONNHANDLE_INVALID)
+        {
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
 
 /*********************************************************************
  * @fn      clearConnListEntry
