@@ -33,12 +33,12 @@ static List_List paramUpdateList;
  */
 void spinForever(void)
 {
-  volatile uint8_t x = 0;;
+    volatile uint8_t x = 0;
 
-  while(1)
-  {
-    x++;
-  }
+    while (1)
+    {
+        x++;
+    }
 }
 
 /*********************************************************************

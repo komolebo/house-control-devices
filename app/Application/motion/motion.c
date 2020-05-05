@@ -121,6 +121,8 @@ static void MotionSm_disable(void);
 static void MotionSm_measure(void);
 static void MotionSm_checkPrecond(void);
 static void MotionSm_detect(void);
+static void MotionSm_checkLedcfg(void);
+static bool isLedEnabled();
 /*********************************************************************
  * VARIABLES
  */
@@ -129,7 +131,8 @@ static motionSm_t motionSm[] =
 {
  { MOTION_INIT,     EVT_INIT_DONE,      MOTION_CALIBRATE,MotionSm_init         },
 
- { MOTION_CALIBRATE,EVT_CHECK_PRECOND,  MOTION_CALIBRATE,MotionSm_checkPrecond  },
+ { MOTION_CALIBRATE,EVT_LED_CHANGE,     MOTION_CALIBRATE,MotionSm_checkLedcfg  },
+ { MOTION_CALIBRATE,EVT_CHECK_PRECOND,  MOTION_CALIBRATE,MotionSm_checkPrecond },
  { MOTION_CALIBRATE,EVT_DISABLE,        MOTION_DISABLE, MotionSm_disable       },
  { MOTION_CALIBRATE,EVT_MEASURE,        MOTION_MEASURE, MotionSm_measure       },
  { MOTION_MEASURE,  EVT_MEASURE,        MOTION_MEASURE, MotionSm_measure       },
@@ -138,11 +141,13 @@ static motionSm_t motionSm[] =
  { MOTION_DISABLE,  EVT_CONN,           MOTION_DISABLE, MotionSm_checkPrecond  },
  { MOTION_DISABLE,  EVT_MEASURE,        MOTION_MEASURE, MotionSm_measure       },
 
+ { MOTION_MEASURE,  EVT_LED_CHANGE,     MOTION_MEASURE, MotionSm_checkLedcfg   },
  { MOTION_MEASURE,  EVT_MODE_CHANGE,    MOTION_MEASURE, MotionSm_checkPrecond  },
  { MOTION_MEASURE,  EVT_DISCONN,        MOTION_DISABLE, MotionSm_disable       },
  { MOTION_MEASURE,  EVT_DETECT,         MOTION_DETECT,  MotionSm_detect        },
  { MOTION_MEASURE,  EVT_DISABLE,        MOTION_DISABLE, MotionSm_disable       },
 
+ { MOTION_DETECT,   EVT_LED_CHANGE,     MOTION_DETECT,  MotionSm_checkLedcfg   },
  { MOTION_DETECT,   EVT_MODE_CHANGE,    MOTION_DETECT,  MotionSm_checkPrecond  },
  { MOTION_DETECT,   EVT_DISCONN,        MOTION_DISABLE, MotionSm_disable       },
  { MOTION_DETECT,   EVT_MEASURE,        MOTION_MEASURE, MotionSm_measure       },
@@ -200,8 +205,6 @@ static PIN_Config buttonPinTable[] = {
 
 // Clock objects for debouncing the buttons
 static Clock_Struct button1DebounceClock;
-
-
 
 /*********************************************************************
  * FUNCTIONS
@@ -451,6 +454,16 @@ void ConfigService_ValueChangeHandler(
         enqueueMsg(EVT_MODE_CHANGE, NULL);
         break;
 
+    case CS_LED_ID:
+    {
+        received_val = pCharData->data[0];
+        Log_info3("Value Change msg: %s %s: 0x%x",
+                  (uintptr_t)"Data Service",
+                  (uintptr_t)"Led",
+                  (uint32_t)received_val);
+        enqueueMsg(EVT_LED_CHANGE, NULL);
+        break;
+    }
     default:
         return;
     }
@@ -830,9 +843,13 @@ static void MotionSm_init(void)
                             Motion_swiFxn,
                             1000 * MOTION_CALIBRATION_PERIOD_SEC,
                             0, 0, 0);
+
     // start calibration here
     Util_restartClock(&motionClock, 1000 * MOTION_CALIBRATION_PERIOD_SEC);
-    Led_blink(MOTION_CALIBRATE_BLINK_PERIOD_MS);
+    if (isLedEnabled())
+    {
+        Led_blink(MOTION_CALIBRATE_BLINK_PERIOD_MS);
+    }
 }
 
 static void MotionSm_checkPrecond(void)
@@ -845,10 +862,15 @@ static void MotionSm_checkPrecond(void)
     connected = isConnected();
     ConfigService_GetParameter(CS_MODE_ID, &readLen, &configEnabled);
 
-    Log_info3("%s: connected: %d, configuration enabled: %d",
-              (uintptr_t )__func__, connected, configEnabled);
+    Log_info4("%s: connected: %d, config enabled: %d, led enabled: %d",
+              (uintptr_t )__func__, connected, configEnabled, isLedEnabled());
 
     enqueueMsg((connected && configEnabled) ? EVT_MEASURE : EVT_DISABLE, NULL);
+
+    if (isLedEnabled())
+    {
+        Led_off();
+    }
 }
 
 static void MotionSm_disable(void)
@@ -885,13 +907,36 @@ static void MotionSm_measure(void)
 static void MotionSm_detect(void)
 {
     Log_info1("%s", (uintptr_t)__func__);
+
     // lid the LED and start detection clock, send notification
-    Led_on();
+    if(isLedEnabled())
+    {
+        Led_on();
+    }
     Util_restartClock(&motionClock, MOTION_DETECTION_HOLDON_SEC * 1000);
 
     // TODO: set correct service
     uint8_t val = DS_TRIGGERED;
     DataService_SetParameter(DS_STATE_ID, 1, &val);
+}
+
+static bool isLedEnabled()
+{
+    uint16_t readLen;
+    uint8_t ledEnabled;
+
+    ConfigService_GetParameter(CS_LED_ID, &readLen, &ledEnabled);
+
+    return ledEnabled;
+}
+
+static void MotionSm_checkLedcfg(void)
+{
+    // turn off if LED is disabled by BACK-END
+    if (isLedEnabled() == false)
+    {
+        Led_off();
+    }
 }
 
 #endif
