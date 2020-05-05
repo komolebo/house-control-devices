@@ -46,17 +46,18 @@ CONST uint8_t ConfigServiceUUID[ATT_UUID_SIZE] =
 };
 
 // Config mode UUID
-CONST uint8_t cs_ModeUUID[ATT_UUID_SIZE] =
+CONST uint8_t cs_ModeUUID[ATT_BT_UUID_SIZE] =
 {
-    BASE128_FROM_UINT16(ÑS_MODE_UUID)
+    LO_UINT16(ÑS_MODE_UUID), HI_UINT16(ÑS_MODE_UUID)
 };
 
+#if 0
 // Config sensitivity UUID
-CONST uint8_t cs_SensitivityUUID[ATT_UUID_SIZE] =
+CONST uint8_t cs_SensitivityUUID[ATT_BT_UUID_SIZE] =
 {
     BASE128_FROM_UINT16(ÑS_SENSITIVITY_UUID)
 };
-
+#endif
 // MODE UUID
 CONST uint8_t cs_LEDUUID[ATT_BT_UUID_SIZE] =
 {
@@ -86,6 +87,7 @@ static uint8_t cs_ModeVal[CS_MODE_LEN] = { 0 };
 // Length of data in characteristic "Mode" Value variable
 static uint16_t cs_ModeValLen = CS_MODE_LEN;
 
+#if 0
 // Characteristic "Sensitivity" Properties (for declaration)
 static uint8_t cs_SensitivityProps = GATT_PROP_READ | GATT_PROP_WRITE;
 
@@ -94,6 +96,7 @@ static uint8_t cs_SensitivityVal[CS_SENSITIVITY_LEN] = { MOTION_SENSITIVITY_3M }
 
 // Length of data in characteristic "Sensitivity" Value variable
 static uint16_t cs_SensitivityValLen = CS_SENSITIVITY_LEN;
+#endif
 
 // Characteristic "MODE" Properties (for declaration)
 static uint8_t cs_LedProps = GATT_PROP_READ | GATT_PROP_WRITE |
@@ -126,11 +129,12 @@ static gattAttribute_t Config_ServiceAttrTbl[] =
         },
             // Mode Characteristic Value
             {
-                { ATT_UUID_SIZE, cs_ModeUUID },
+                { ATT_BT_UUID_SIZE, cs_ModeUUID },
                 GATT_PERMIT_READ | GATT_PERMIT_WRITE,
                 0,
                 cs_ModeVal
             },
+#if 0
         // Sensitivity Characteristic Declaration
         {
             { ATT_BT_UUID_SIZE, characterUUID },
@@ -145,14 +149,15 @@ static gattAttribute_t Config_ServiceAttrTbl[] =
                 0,
                 cs_SensitivityVal
             },
-        // LSMode Characteristic Declaration
+#endif
+        // LedMode Characteristic Declaration
         {
             { ATT_BT_UUID_SIZE, characterUUID },
             GATT_PERMIT_READ,
             0,
             &cs_LedProps
         },
-            // Mode Characteristic Value
+            // Led Mode Characteristic Value
             {
                 { ATT_BT_UUID_SIZE, cs_LEDUUID },
                 GATT_PERMIT_READ | GATT_PERMIT_WRITE,
@@ -267,7 +272,7 @@ bStatus_t ConfigService_SetParameter(uint8_t param, uint16_t len, void *value)
         needAuth = FALSE;  // Change if authenticated link is required for sending.
         Log_info2("SetParameter : %s len: %d", (uintptr_t)"Mode", len);
         break;
-
+#if 0
     case CS_SENSITIVITY_ID:
         pAttrVal = cs_SensitivityVal;
         pValLen = &cs_SensitivityValLen;
@@ -275,7 +280,7 @@ bStatus_t ConfigService_SetParameter(uint8_t param, uint16_t len, void *value)
         needAuth = FALSE;  // Change if authenticated link is required for sending.
         Log_info2("SetParameter : %s len: %d", (uintptr_t)"Mode", len);
         break;
-
+#endif
     default:
         Log_error1("SetParameter: Parameter #%d not valid.", param);
         return(INVALIDPARAMETER);
@@ -335,13 +340,13 @@ bStatus_t ConfigService_GetParameter(uint8_t param, uint16_t *len, void *value)
         Log_info2("GetParameter : %s returning %d", (uintptr_t)"Mode",
                   *(uint8_t*)value);
         break;
-
+#if 0
     case CS_SENSITIVITY_ID:
         memcpy(value, cs_SensitivityVal, *len);
         Log_info2("GetParameter : %s returning %d", (uintptr_t)"Sensitivity",
                   *(uint8_t*)value);
         break;
-
+#endif
     case CS_LED_ID:
         *len = MIN(*len, cs_LedValLen);
         memcpy(value, cs_LedVal, *len);
@@ -378,18 +383,20 @@ static uint8_t Config_Service_findCharParamId(gattAttribute_t *pAttr)
         return(Config_Service_findCharParamId(pAttr - 1)); // Assume the value attribute precedes CCCD and recurse
     }
     // Is this attribute in "Mode"?
-    else if(ATT_UUID_SIZE == pAttr->type.len &&
+    else if(ATT_BT_UUID_SIZE == pAttr->type.len &&
             !memcmp(pAttr->type.uuid, cs_ModeUUID, pAttr->type.len))
     {
         return(CS_MODE_ID);
     }
+#if 0
     // Is this attribute in "Sensitivity"?
     else if(ATT_UUID_SIZE == pAttr->type.len &&
             !memcmp(pAttr->type.uuid, cs_SensitivityUUID, pAttr->type.len))
     {
         return(CS_SENSITIVITY_ID);
     }
-    // Is this attribute in "Mode"?
+#endif
+    // Is this attribute in "Led Mode"?
     else if(ATT_BT_UUID_SIZE == pAttr->type.len &&
             !memcmp(pAttr->type.uuid, cs_LEDUUID, pAttr->type.len))
     {
@@ -441,7 +448,7 @@ static bStatus_t Config_Service_ReadAttrCB(uint16_t connHandle,
                   method);
         /* Other considerations for Stream can be inserted here */
         break;
-
+#if 0
     case CS_SENSITIVITY_ID:
         valueLen = cs_SensitivityValLen;
 
@@ -452,7 +459,7 @@ static bStatus_t Config_Service_ReadAttrCB(uint16_t connHandle,
                   method);
         /* Other considerations for Stream can be inserted here */
         break;
-
+#endif
     case CS_LED_ID:
         valueLen = cs_LedValLen;
 
@@ -545,7 +552,7 @@ static bStatus_t Config_Service_WriteAttrCB(uint16_t connHandle,
 
         Log_info5(
             "WriteAttrCB : %s connHandle(%d) len(%d) offset(%d) method(0x%02x)",
-            (uintptr_t)"Stream",
+            (uintptr_t)"Mode",
             connHandle,
             len,
             offset,
@@ -553,6 +560,7 @@ static bStatus_t Config_Service_WriteAttrCB(uint16_t connHandle,
         /* Other considerations for Stream can be inserted here */
         break;
 
+#if 0
     case CS_SENSITIVITY_ID:
         writeLen = CS_SENSITIVITY_LEN;
         pValueLenVar = &cs_SensitivityValLen;
@@ -566,6 +574,7 @@ static bStatus_t Config_Service_WriteAttrCB(uint16_t connHandle,
             method);
         /* Other considerations for Stream can be inserted here */
         break;
+#endif
     case CS_LED_ID:
          writeLen = CS_LED_LEN;
          pValueLenVar = &cs_LedValLen;
