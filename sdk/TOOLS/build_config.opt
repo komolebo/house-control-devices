@@ -4,12 +4,12 @@
 
  @brief This file contains the Bluetooth Low Energy (BLE) build config options.
 
-   Group: CMCU, LPRF
-   Target Device: cc2640r2
+ Group: WCS, BTS
+ Target Device: cc2640r2
 
  ******************************************************************************
-   
- Copyright (c) 2015-2020, Texas Instruments Incorporated
+ 
+ Copyright (c) 2011-2020, Texas Instruments Incorporated
  All rights reserved.
 
  Redistribution and use in source and binary forms, with or without
@@ -40,8 +40,8 @@
  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
  ******************************************************************************
-   
-   
+ 
+ 
  *****************************************************************************/
 
 /*
@@ -61,6 +61,9 @@
 
     BLE_V41_FEATURES        Configure the stack to use features from the BLE 4.1 Specification
         L2CAP_COC_CFG       - Enable L2CAP Connection Oriented Channels
+        V41_CTRL_CFG        - Enable Ping, Slave Feature Exchange, Connection Parameter Request, and
+                              Master Slave connection roles within the Controller. This feature
+                              is enabled by default and cannot be disabled.
 
     BLE_V42_FEATURES        Configure the stack to use features from the BLE 4.2 Specification
                             The following BLE 4.2 features are enabled by default and cannot
@@ -69,15 +72,12 @@
         SECURE_CONNS_CFG    - Enable Secure Connections Pairing Procedure
         PRIVACY_1_2_CFG     - Enable Enhanced Privacy
 
-    BLE_V50_FEATURES        Configure the stack to use features from the BLE 5.0 Specification
-                            The following BLE 5.0 features are enabled by default and cannot
-                            be disabled.
-        PHY_2MBPS_CFG       - Enable 2 Mbps data rate in the Controller
-        HDC_NC_ADV_CFG      - Enable High Duty Cycle Non-Connectable Advertising
-        CHAN_ALGO2_CFG      - Enable Channel Selection Algorithm 2
-
     HCI_TL_FULL             - All supported HCI commands are available via the Tranport Layer's NPI.
                             - Intended for NP solution.
+    HCI_TL_PTM              - Only those HCI commands needed for Production Test Mode are available
+                              via the Transport Layer's NPI
+                            - Intended for SOC solutions where, during production, accesss is temporarily
+                              needed (e.g. for PHY testing using Direct Test Mode, etc.).
     HCI_TL_NONE             - No supported HCI commands are available via the Transport Layer's NPI.
                             - Intended for SOC solutions.
 
@@ -125,24 +125,28 @@
 -DGAP_BOND_MGR
 
 /* BLE v4.1 Features */
-/* -DV41_FEATURES=L2CAP_COC_CFG */
+/* This is needed to use GATT_SERVICE_CHANGED */
+/*-DV41_FEATURES=L2CAP_COC_CFG */
 
-/* BLE v4.2 Features
- * Note: For advanced users who choose to explicitly build their BLE
- * Stack without ROM the following upper limit on RAM usage must be
- * observed when using the Secure Connections Feature:
- * R1: 0x20004F2C
- * R2: 0x20004F80
- * When using linker command files provided by this SDK, the linker
- * symbol ENCRYPTION_ROM=1 or ENCRYPTION_ROM=2 may be defined to set
- * this upper limit for R1 and R2 devices, respectively.
- */
-
-/* BLE v5.0 Features
- * Note: The Long Range and Advertising Extension features are
- * for evaluation only.
- */
+/* BLE v4.2 Features */
+/* Note: For advanced users who choose to explicitly build their BLE    */
+/* Stack without ROM the following upper limit on RAM usage must be     */
+/* observed when using the Secure Connections Feature:                  */
+/* R1: 0x20004F2C                                                       */
+/* R2: 0x20004F80                                                       */
+/* When using linker command files provided by this SDK, the linker     */
+/* symbol ENCRYPTION_ROM=1 or ENCRYPTION_ROM=2 may be defined to set    */
+/* this upper limit for R1 and R2 devices, respectively.                */
 
 /* Include Transport Layer (Full or PTM) */
 -DHCI_TL_NONE
+/* -DHCI_TL_PTM */
 /* -DHCI_TL_FULL */
+
+/* BLE Vendor Specific Features */
+/* -DEXTRA_ADV_FEAT=SCAN_REQ_RPT_CFG */
+/* -DEXTRA_SCAN_FEAT=SCAN_EVT_NOTICE_CFG */
+
+/* Set RF Mode */
+-DRF_SINGLEMODE
+/* -DRF_MULTIMODE */
