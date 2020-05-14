@@ -66,7 +66,6 @@
 #include "icall_ble_api.h"
 
 #include "devinfoservice.h"
-#include "simple_gatt_profile.h"
 #include "ll_common.h"
 
 // Used for imgHdr_t structure
@@ -96,7 +95,9 @@
 
 #include "ble_user_config.h"
 
-
+#include <custom_device_if.h>
+#include <profiles_if.h>
+#include "device_common.h"
 /*********************************************************************
  * CONSTANTS
  */
@@ -148,20 +149,11 @@
   #if defined (__IAR_SYSTEMS_ICC__)
     #define SBP_TASK_STACK_SIZE                   1000
   #elif defined __TI_COMPILER_VERSION || defined __TI_COMPILER_VERSION__
-    #define SBP_TASK_STACK_SIZE                   800
+    #define SBP_TASK_STACK_SIZE                   1000
   #else
     #error "Unknown Compiler"
    #endif
 #endif
-
-// Application events used with app queue (appEvtHdr_t)
-// These are not related to RTOS evts, but instead enqueued via state change CBs
-#define SBP_STATE_CHANGE_EVT                  0x0001
-#define SBP_CHAR_CHANGE_EVT                   0x0002
-#define SBP_OAD_RESET_EVT                     0x0003
-#define SBP_PASSCODE_NEEDED_EVT               0x0004
-// Application specific event ID for Connection Event End Events
-#define SBP_CONN_EVT                          0x0005
 
 // Internal Events for RTOS application
 #define SBP_ICALL_EVT                         ICALL_MSG_EVENT_ID // Event_Id_31
@@ -183,13 +175,6 @@
 /*********************************************************************
  * TYPEDEFS
  */
-
-// App event passed from profiles.
-typedef struct
-{
-  appEvtHdr_t hdr;  // event header.
-  uint8_t *pData;   // Event payload
-} sbpEvt_t;
 
 /*********************************************************************
  * GLOBAL VARIABLES
@@ -241,19 +226,19 @@ static uint8_t scanRspData[] =
   // complete name
   0x12,   // length of this data
   GAP_ADTYPE_LOCAL_NAME_COMPLETE,
-  'S',
-  'B',
-  'P',
+  'M',
+  'O',
+  'T',
+  'I',
+  'O',
+  'N',
   ' ',
   'O',
   'A',
   'D',
   ' ',
-  'A',
-  'P',
-  'P',
   ' ',
-  'v',
+  'V',
   ' ', // These 4 octets are placeholders for the SOFTVER field
   ' ', // which will be updated at init time
   ' ',
@@ -290,8 +275,8 @@ static uint8_t advertData[] =
   GAP_ADTYPE_16BIT_MORE,      // some of the UUID's, but not all
   LO_UINT16(OAD_RESET_SERVICE_UUID),
   HI_UINT16(OAD_RESET_SERVICE_UUID),
-  LO_UINT16(SIMPLEPROFILE_SERV_UUID),
-  HI_UINT16(SIMPLEPROFILE_SERV_UUID)
+  LO_UINT16(0xFF00),
+  HI_UINT16(0xFF01)
 };
 
 // GAP GATT Attributes
@@ -336,14 +321,10 @@ static uint8_t SimplePeripheral_processStackMsg(ICall_Hdr *pMsg);
 static uint8_t SimplePeripheral_processGATTMsg(gattMsgEvent_t *pMsg);
 static void SimplePeripheral_processAppMsg(sbpEvt_t *pMsg);
 static void SimplePeripheral_processStateChangeEvt(gaprole_States_t newState);
-static void SimplePeripheral_processCharValueChangeEvt(uint8_t paramID);
-static void SimplePeripheral_performPeriodicTask(void);
 static void SimplePeripheral_clockHandler(UArg arg);
 static void SimplePeripheral_sendAttRsp(void);
 static void SimplePeripheral_freeAttRsp(uint8_t status);
 static void SimplePeripheral_stateChangeCB(gaprole_States_t newState);
-static void SimplePeripheral_charValueChangeCB(uint8_t paramID);
-static uint8_t SimplePeripheral_enqueueMsg(uint8_t event, uint8_t state, uint8_t *pData);
 
 static void SimplePeripheral_connEvtCB(Gap_ConnEventRpt_t *pReport);
 static void SimplePeripheral_processOadResetEvt(oadResetWrite_t *resetEvt);
@@ -379,12 +360,6 @@ static gapBondCBs_t SimplePeripheral_BondMgrCBs =
 {
   SimplePeripheral_passcodeCB, // Passcode callback,
   NULL                         // Pairing / Bonding state Callback (not used by application)
-};
-
-// Simple GATT Profile Callbacks
-static simpleProfileCBs_t SimplePeripheral_simpleProfileCBs =
-{
-  SimplePeripheral_charValueChangeCB // Characteristic value change callback
 };
 
 static oadResetWriteCB_t SimplePeripheral_oadResetCBs =
@@ -607,35 +582,11 @@ static void SimplePeripheral_init(void)
    // Initialize GATT attributes
   GGS_AddService(GATT_ALL_SERVICES);           // GAP
   GATTServApp_AddService(GATT_ALL_SERVICES);   // GATT attributes
-  DevInfo_AddService();                        // Device Information Service
+//  DevInfo_AddService();                        // Device Information Service
 
-  SimpleProfile_AddService(GATT_ALL_SERVICES); // Simple GATT Profile
-
+  CustomDevice_init(selfEntity);
 
   Reset_addService((oadUsrAppCBs_t *)&SimplePeripheral_oadResetCBs);
-
-  // Setup the SimpleProfile Characteristic Values
-  {
-    uint8_t charValue1 = 1;
-    uint8_t charValue2 = 2;
-    uint8_t charValue3 = 3;
-    uint8_t charValue4 = 4;
-    uint8_t charValue5[SIMPLEPROFILE_CHAR5_LEN] = { 1, 2, 3, 4, 5 };
-
-    SimpleProfile_SetParameter(SIMPLEPROFILE_CHAR1, sizeof(uint8_t),
-                               &charValue1);
-    SimpleProfile_SetParameter(SIMPLEPROFILE_CHAR2, sizeof(uint8_t),
-                               &charValue2);
-    SimpleProfile_SetParameter(SIMPLEPROFILE_CHAR3, sizeof(uint8_t),
-                               &charValue3);
-    SimpleProfile_SetParameter(SIMPLEPROFILE_CHAR4, sizeof(uint8_t),
-                               &charValue4);
-    SimpleProfile_SetParameter(SIMPLEPROFILE_CHAR5, SIMPLEPROFILE_CHAR5_LEN,
-                               charValue5);
-  }
-
-  // Register callback with SimpleGATTprofile
-  SimpleProfile_RegisterAppCBs(&SimplePeripheral_simpleProfileCBs);
 
   // Start the Device
   VOID GAPRole_StartDevice(&SimplePeripheral_gapRoleCBs);
@@ -655,6 +606,7 @@ static void SimplePeripheral_init(void)
 
   // Add in Null terminator
   versionStr[OAD_SW_VER_LEN] = NULL;
+
 
 #ifdef LED_DEBUG
   // Open the LED debug pins
@@ -801,40 +753,8 @@ static void SimplePeripheral_taskFxn(UArg a0, UArg a1)
       if (events & SBP_PERIODIC_EVT)
       {
         Util_startClock(&periodicClock);
-
-        // Perform periodic application task
-        SimplePeripheral_performPeriodicTask();
       }
     }
-  }
-}
-
-/*********************************************************************
- * @fn      SimplePeripheral_performPeriodicTask
- *
- * @brief   Perform a periodic application task. This function gets called
- *          every five seconds (SBP_PERIODIC_EVT_PERIOD). In this example,
- *          the value of the third characteristic in the SimpleGATTProfile
- *          service is retrieved from the profile, and then copied into the
- *          value of the the fourth characteristic.
- *
- * @param   None.
- *
- * @return  None.
- */
-static void SimplePeripheral_performPeriodicTask(void)
-{
-  uint8_t valueToCopy;
-
-  // Call to retrieve the value of the third characteristic in the profile
-  if (SimpleProfile_GetParameter(SIMPLEPROFILE_CHAR3, &valueToCopy) == SUCCESS)
-  {
-    // Call to set that value of the fourth characteristic in the profile.
-    // Note that if notifications of the fourth characteristic have been
-    // enabled by a GATT client device, then a notification will be sent
-    // every time this function is called.
-    SimpleProfile_SetParameter(SIMPLEPROFILE_CHAR4, sizeof(uint8_t),
-                               &valueToCopy);
   }
 }
 
@@ -1117,14 +1037,7 @@ static void SimplePeripheral_processAppMsg(sbpEvt_t *pMsg)
       break;
     }
 
-    case SBP_CHAR_CHANGE_EVT:
-    {
-      SimplePeripheral_processCharValueChangeEvt(pMsg->hdr.state);
-
-      break;
-    }
-
-    case SBP_OAD_RESET_EVT:
+    case EVT_OAD_RESET:
     {
       // Convert generic pData pointer to oadResetWrite_t
       oadResetWrite_t *oadResetEvt  = (oadResetWrite_t *)(pMsg->pData);
@@ -1134,16 +1047,15 @@ static void SimplePeripheral_processAppMsg(sbpEvt_t *pMsg)
       break;
     }
 
-    case SBP_PASSCODE_NEEDED_EVT:
+    case EVT_PASSCODE_NEEDED:
     {
       SimplePeripheral_processPasscode((gapPasskeyNeededEvent_t*)pMsg->pData);
       // Free the app data
       break;
     }
-    case SBP_CONN_EVT:
+    case EVT_CONN:
     {
         SimplePeripheral_processConnEvt((Gap_ConnEventRpt_t *)(pMsg->pData));
-
         break;
     }
 
@@ -1151,6 +1063,8 @@ static void SimplePeripheral_processAppMsg(sbpEvt_t *pMsg)
       // Do nothing.
       break;
   }
+
+  CustomDevice_processApplicationMessage(pMsg);
 }
 
 /*********************************************************************
@@ -1189,6 +1103,7 @@ static void SimplePeripheral_processStateChangeEvt(gaprole_States_t newState)
 
         DevInfo_SetParameter(DEVINFO_SYSTEM_ID, DEVINFO_SYSTEM_ID_LEN, systemId);
 
+        enqueueMsg(EVT_INIT_DONE, NULL);
       }
       break;
 
@@ -1228,6 +1143,7 @@ static void SimplePeripheral_processStateChangeEvt(gaprole_States_t newState)
           sendSvcChngdOnNextBoot = FALSE;
         }
 #endif // ( defined(GAP_BOND_MGR) && !defined(GATT_NO_SERVICE_CHANGED) )
+        SimplePeripheral_enqueueMsg(EVT_CONN, 0, NULL);
       }
       break;
 
@@ -1247,11 +1163,14 @@ static void SimplePeripheral_processStateChangeEvt(gaprole_States_t newState)
       break;
 
     case GAPROLE_ERROR:
+        SimplePeripheral_enqueueMsg(EVT_DISCONN, 0, NULL);
       break;
 
     default:
       break;
   }
+
+  enqueueMsg(EVT_GAP_CHANGE, NULL);
 }
 
 /*********************************************************************
@@ -1267,38 +1186,6 @@ static void SimplePeripheral_processPasscode(gapPasskeyNeededEvent_t *pData)
   uint32_t passcode = 123456;
   // Send passcode to GAPBondMgr
   GAPBondMgr_PasscodeRsp(pData->connectionHandle, SUCCESS, passcode);
-}
-
-/*********************************************************************
- * @fn      SimplePeripheral_processCharValueChangeEvt
- *
- * @brief   Process a pending Simple Profile characteristic value change
- *          event.
- *
- * @param   paramID - parameter ID of the value that was changed.
- *
- * @return  None.
- */
-static void SimplePeripheral_processCharValueChangeEvt(uint8_t paramID)
-{
-  uint8_t newValue;
-
-  switch(paramID)
-  {
-    case SIMPLEPROFILE_CHAR1:
-      SimpleProfile_GetParameter(SIMPLEPROFILE_CHAR1, &newValue);
-
-      break;
-
-    case SIMPLEPROFILE_CHAR3:
-      SimpleProfile_GetParameter(SIMPLEPROFILE_CHAR3, &newValue);
-
-      break;
-
-    default:
-      // should not reach here!
-      break;
-  }
 }
 
 /*********************************************************************
@@ -1387,7 +1274,7 @@ static void SimplePeripheral_passcodeCB(uint8_t *deviceAddr,
     pData->numComparison = numComparison;
 
     // Enqueue the event.
-    SimplePeripheral_enqueueMsg(SBP_PASSCODE_NEEDED_EVT, NULL,
+    SimplePeripheral_enqueueMsg(EVT_PASSCODE_NEEDED, NULL,
                                     (uint8_t *) pData);
   }
 }
@@ -1404,21 +1291,6 @@ static void SimplePeripheral_passcodeCB(uint8_t *deviceAddr,
 static void SimplePeripheral_stateChangeCB(gaprole_States_t newState)
 {
   SimplePeripheral_enqueueMsg(SBP_STATE_CHANGE_EVT, newState, NULL);
-}
-
-/*********************************************************************
- * @fn      SimplePeripheral_charValueChangeCB
- *
- * @brief   Callback from Simple Profile indicating a characteristic
- *          value change.
- *
- * @param   paramID - parameter ID of the value that was changed.
- *
- * @return  None.
- */
-static void SimplePeripheral_charValueChangeCB(uint8_t paramID)
-{
-  SimplePeripheral_enqueueMsg(SBP_CHAR_CHANGE_EVT, paramID, NULL);
 }
 
 /*********************************************************************
@@ -1444,7 +1316,7 @@ void SimplePeripheral_processOadResetWriteCB(uint16_t connHandle,
         oadResetWriteEvt->len = len;
 
         // This function will enqueue the messsage and wake the application
-        SimplePeripheral_enqueueMsg(SBP_OAD_RESET_EVT, 0, (uint8_t *)oadResetWriteEvt);
+        SimplePeripheral_enqueueMsg(EVT_OAD_RESET, 0, (uint8_t *)oadResetWriteEvt);
     }
 }
 
@@ -1476,12 +1348,11 @@ static void SimplePeripheral_clockHandler(UArg arg)
  */
 static void SimplePeripheral_connEvtCB(Gap_ConnEventRpt_t *pReport)
 {
-  // Enqueue the event for processing in the app context.
-  if( SimplePeripheral_enqueueMsg(SBP_CONN_EVT, 0 ,(uint8_t *) pReport) == FALSE)
-  {
-    ICall_free(pReport);
-  }
-
+    // Enqueue the event for processing in the app context.
+    if (SimplePeripheral_enqueueMsg(EVT_CONN, 0, (uint8_t *) pReport) == FALSE)
+    {
+        ICall_free(pReport);
+    }
 }
 /*********************************************************************
  *
@@ -1493,7 +1364,7 @@ static void SimplePeripheral_connEvtCB(Gap_ConnEventRpt_t *pReport)
  *
  * @return  TRUE or FALSE
  */
-static uint8_t SimplePeripheral_enqueueMsg(uint8_t event, uint8_t state,
+uint8_t SimplePeripheral_enqueueMsg(uint8_t event, uint8_t state,
                                            uint8_t *pData)
 {
   sbpEvt_t *pMsg = ICall_malloc(sizeof(sbpEvt_t));
