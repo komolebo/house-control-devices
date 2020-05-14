@@ -725,10 +725,7 @@ static void MotionSm_handleClockEvt()
     switch (motionState) {
         case MOTION_CALIBRATE:
         { /* Calibration finished */
-            if (Util_isActive(&motionClock))
-            {
-                Util_stopClock(&motionClock);
-            }
+            Util_stopClock(&motionClock);
             Led_off();
 
             // check connection and configuration
@@ -738,18 +735,15 @@ static void MotionSm_handleClockEvt()
 
         case MOTION_MEASURE:
         {
-//            Util_restartClock(&motionClock,
-//                              1000 * MOTION_MEASURE_PERIOD_SEC);
+            Util_restartClock(&motionClock,
+                              1000 * MOTION_MEASURE_PERIOD_SEC);
             enqueueMsg(EVT_MEASURE, NULL);
             break;
         }
 
         case MOTION_DETECT:
         {
-            if (Util_isActive(&motionClock))
-            {
-                Util_stopClock(&motionClock);
-            }
+            Util_stopClock(&motionClock);
             enqueueMsg(EVT_MEASURE, NULL);
             break;
         }
@@ -769,8 +763,8 @@ static void MotionSm_init(void)
                             0, 0, 0);
 
     // start calibration here
-//    Util_restartClock(&motionClock, 1000 * MOTION_CALIBRATION_PERIOD_SEC);
-    Util_startClock(&motionClock);
+    Util_restartClock(&motionClock, 1000 * MOTION_CALIBRATION_PERIOD_SEC);
+//    Util_startClock(&motionClock);
     if (isLedEnabled())
     {
         Led_blink(MOTION_CALIBRATE_BLINK_PERIOD_MS);
@@ -779,11 +773,6 @@ static void MotionSm_init(void)
 
 static void MotionSm_checkPrecond(void)
 {
-    // check to enable/disable the feature if it's disabled/enabled respectively
-//    uint8_t configEnabled, connected;
-//
-//    connected = isConnected();
-
     enqueueMsg(isConnected() && isConfigEnabled() ? EVT_MEASURE : EVT_DISABLE,
             NULL);
 
@@ -796,19 +785,13 @@ static void MotionSm_checkPrecond(void)
 static void MotionSm_disable(void)
 {
     // stop everything
-    if (Util_isActive(&motionClock))
-    {
-        Util_stopClock(&motionClock);
-    }
+    Util_stopClock(&motionClock);
     Led_off();
 }
 
 static void MotionSm_measure(void)
 {
-    if (Util_isActive(&motionClock))
-    {
-        Util_stopClock(&motionClock);
-    }
+    Util_stopClock(&motionClock);
     // measure and start clock
 
     uint32_t microVolt = /*MOTION_DETECTION_THRESHOLD_MV - 2;// */Adc_readMedianFromSamples(MOTION_ADC_MEASURE_SAMPLES);
@@ -833,11 +816,10 @@ static void MotionSm_detect(void)
     // lid the LED and start detection clock, send notification
     if(isLedEnabled())
     {
-//        Led_on();
-        Led_blink(100);
+        Led_on();
+//        Led_blink(100);
     }
-//    Util_restartClock(&motionClock, MOTION_DETECTION_HOLDON_SEC * 1000);
-    Util_startClock(&motionClock);
+    Util_restartClock(&motionClock, MOTION_DETECTION_HOLDON_SEC * 1000);
 
     // TODO: set correct service
     uint8_t val = DS_TRIGGERED;
