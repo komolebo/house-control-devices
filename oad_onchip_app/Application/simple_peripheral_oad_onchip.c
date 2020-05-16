@@ -98,6 +98,8 @@
 #include <custom_device_if.h>
 #include <profiles_if.h>
 #include "device_common.h"
+
+#include "battservice.h"
 /*********************************************************************
  * CONSTANTS
  */
@@ -144,6 +146,8 @@
 // Task configuration
 #define SBP_TASK_PRIORITY                     1
 
+
+
 // Warning! To optimize RAM, task stack size must be a multiple of 8 bytes
 #ifndef SBP_TASK_STACK_SIZE
   #if defined (__IAR_SYSTEMS_ICC__)
@@ -159,9 +163,11 @@
 #define SBP_ICALL_EVT                         ICALL_MSG_EVENT_ID // Event_Id_31
 #define SBP_QUEUE_EVT                         UTIL_QUEUE_EVENT_ID // Event_Id_30
 #define SBP_PERIODIC_EVT                      Event_Id_00
+#define BATT_PERIODIC_EVT                     Event_Id_01
 #define SBP_ALL_EVENTS                        (SBP_ICALL_EVT        | \
                                                SBP_QUEUE_EVT        | \
-                                               SBP_PERIODIC_EVT)
+                                               SBP_PERIODIC_EVT     | \
+                                               BATT_PERIODIC_EVT)
 
 // Set the register cause to the registration bit-mask
 #define CONNECTION_EVENT_REGISTER_BIT_SET(RegisterCause) (connectionEventRegisterCauseBitMap |= RegisterCause )
@@ -172,6 +178,8 @@
 // Gets whether the RegisterCause was registered to recieve connection event
 #define CONNECTION_EVENT_REGISTRATION_CAUSE(RegisterCause) (connectionEventRegisterCauseBitMap & RegisterCause )
 
+// Battery measurement period in ms
+#define DEFAULT_BATT_PERIOD                             15000
 /*********************************************************************
  * TYPEDEFS
  */
@@ -279,6 +287,8 @@ static uint8_t advertData[] =
   HI_UINT16(0xFF01)
 };
 
+static Clock_Struct battPerClock;
+
 // GAP GATT Attributes
 static uint8_t attDeviceName[GAP_DEVICE_NAME_LEN] = "SBP OAD on-chip";
 
@@ -310,6 +320,9 @@ static const PIN_Config sbpLedPins[] = {
 // State variable for debugging LEDs
 PIN_State  sbpLedState;
 
+// Profile state parameter.
+static gaprole_States_t gapProfileState = GAPROLE_INIT;
+
 /*********************************************************************
  * LOCAL FUNCTIONS
  */
@@ -322,6 +335,8 @@ static uint8_t SimplePeripheral_processGATTMsg(gattMsgEvent_t *pMsg);
 static void SimplePeripheral_processAppMsg(sbpEvt_t *pMsg);
 static void SimplePeripheral_processStateChangeEvt(gaprole_States_t newState);
 static void SimplePeripheral_clockHandler(UArg arg);
+static void battClockHandler(UArg arg);
+static void battPerTask(void);
 static void SimplePeripheral_sendAttRsp(void);
 static void SimplePeripheral_freeAttRsp(uint8_t status);
 static void SimplePeripheral_stateChangeCB(gaprole_States_t newState);
@@ -492,6 +507,10 @@ static void SimplePeripheral_init(void)
   Util_constructClock(&periodicClock, SimplePeripheral_clockHandler,
                       SBP_PERIODIC_EVT_PERIOD, 0, FALSE, SBP_PERIODIC_EVT);
 
+  Util_constructClock(&battPerClock, battClockHandler,
+                      DEFAULT_BATT_PERIOD, 0, false,
+                      BATT_PERIODIC_EVT);
+
   // For on-chip OAD stack-only download must be followed by app-only
   // So the current app must always be linked to the right stack
   // use this info to read in the stack version
@@ -588,6 +607,9 @@ static void SimplePeripheral_init(void)
 
   Reset_addService((oadUsrAppCBs_t *)&SimplePeripheral_oadResetCBs);
 
+  // Add battery service.
+  Batt_AddService();
+
   // Start the Device
   VOID GAPRole_StartDevice(&SimplePeripheral_gapRoleCBs);
 
@@ -682,80 +704,87 @@ static void SimplePeripheral_init(void)
  */
 static void SimplePeripheral_taskFxn(UArg a0, UArg a1)
 {
-  // Initialize application
-  SimplePeripheral_init();
+    // Initialize application
+    SimplePeripheral_init();
 
-  // Application main loop
-  for (;;)
-  {
-    uint32_t events;
-
-    // Waits for an event to be posted associated with the calling thread.
-    // Note that an event associated with a thread is posted when a
-    // message is queued to the message receive queue of the thread
-    events = Event_pend(syncEvent, Event_Id_NONE, SBP_ALL_EVENTS,
-                        ICALL_TIMEOUT_FOREVER);
-
-    if (events)
+    // Application main loop
+    for (;;)
     {
-      ICall_EntityID dest;
-      ICall_ServiceEnum src;
-      ICall_HciExtEvt *pMsg = NULL;
+        uint32_t events;
 
-      if (ICall_fetchServiceMsg(&src, &dest,
-                                (void **)&pMsg) == ICALL_ERRNO_SUCCESS)
-      {
-        uint8_t safeToDealloc = TRUE;
+        // Waits for an event to be posted associated with the calling thread.
+        // Note that an event associated with a thread is posted when a
+        // message is queued to the message receive queue of the thread
+        events = Event_pend(syncEvent, Event_Id_NONE, SBP_ALL_EVENTS,
+        ICALL_TIMEOUT_FOREVER);
 
-        if ((src == ICALL_SERVICE_CLASS_BLE) && (dest == selfEntity))
+        if (events)
         {
-          ICall_Stack_Event *pEvt = (ICall_Stack_Event *)pMsg;
-          if (pEvt->signature != 0xffff)
-          {
-            // Process inter-task message
-            safeToDealloc = SimplePeripheral_processStackMsg((ICall_Hdr *)pMsg);
-          }
-        }
+            ICall_EntityID dest;
+            ICall_ServiceEnum src;
+            ICall_HciExtEvt *pMsg = NULL;
 
-        if (pMsg && safeToDealloc)
-        {
-          ICall_freeMsg(pMsg);
-        }
-      }
-
-      // If RTOS queue is not empty, process app message.
-      if (events & SBP_QUEUE_EVT)
-      {
-        while (!Queue_empty(appMsgQueue))
-        {
-
-          // Get the first message from the Queue
-          sbpEvt_t *pMsg = (sbpEvt_t *)Util_dequeueMsg(appMsgQueue);
-
-          if (pMsg)
-          {
-            // Process message.
-            SimplePeripheral_processAppMsg(pMsg);
-
-            if (pMsg->pData != NULL)
+            if (ICall_fetchServiceMsg(&src, &dest,
+                                      (void **) &pMsg) == ICALL_ERRNO_SUCCESS)
             {
-              // Free the Queue payload if there is one
-              ICall_free(pMsg->pData);
+                uint8_t safeToDealloc = TRUE;
+
+                if ((src == ICALL_SERVICE_CLASS_BLE) && (dest == selfEntity))
+                {
+                    ICall_Stack_Event *pEvt = (ICall_Stack_Event *) pMsg;
+                    if (pEvt->signature != 0xffff)
+                    {
+                        // Process inter-task message
+                        safeToDealloc = SimplePeripheral_processStackMsg(
+                                (ICall_Hdr *) pMsg);
+                    }
+                }
+
+                if (pMsg && safeToDealloc)
+                {
+                    ICall_freeMsg(pMsg);
+                }
             }
 
-            // Free the space from the message.
-            ICall_free(pMsg);
-          }
+            // If RTOS queue is not empty, process app message.
+            if (events & SBP_QUEUE_EVT)
+            {
+                while (!Queue_empty(appMsgQueue))
+                {
 
+                    // Get the first message from the Queue
+                    sbpEvt_t *pMsg = (sbpEvt_t *) Util_dequeueMsg(appMsgQueue);
+
+                    if (pMsg)
+                    {
+                        // Process message.
+                        SimplePeripheral_processAppMsg(pMsg);
+
+                        if (pMsg->pData != NULL)
+                        {
+                            // Free the Queue payload if there is one
+                            ICall_free(pMsg->pData);
+                        }
+
+                        // Free the space from the message.
+                        ICall_free(pMsg);
+                    }
+
+                }
+            }
+
+            if (events & SBP_PERIODIC_EVT)
+            {
+                Util_startClock(&periodicClock);
+            }
+
+            // Battery service periodic task.
+            if (events & BATT_PERIODIC_EVT)
+            {
+                battPerTask();
+            }
         }
-      }
-
-      if (events & SBP_PERIODIC_EVT)
-      {
-        Util_startClock(&periodicClock);
-      }
     }
-  }
 }
 
 /*********************************************************************
@@ -1170,6 +1199,8 @@ static void SimplePeripheral_processStateChangeEvt(gaprole_States_t newState)
       break;
   }
 
+  gapProfileState = newState;
+
   enqueueMsg(EVT_GAP_CHANGE, NULL);
 }
 
@@ -1381,5 +1412,40 @@ uint8_t SimplePeripheral_enqueueMsg(uint8_t event, uint8_t state,
   }
 
   return FALSE;
+}
+
+/*********************************************************************
+ * @fn      HeartRate_clockHandler
+ *
+ * @brief   Handler function for clock timeouts.
+ *
+ * @param   none
+ *
+ * @return  none
+ */
+static void battClockHandler(UArg arg)
+{
+    Event_post(syncEvent, arg);
+}
+
+/*********************************************************************
+ * @fn      battPerTask
+ *
+ * @brief   Perform a periodic task for battery measurement.
+ *
+ * @param   none
+ *
+ * @return  none
+ */
+static void battPerTask(void)
+{
+    if (gapProfileState == GAPROLE_CONNECTED)
+    {
+        // Perform battery level check.
+        Batt_MeasLevel();
+
+        // Restart timer.
+        Util_startClock (&battPerClock);
+    }
 }
 /*********************************************************************/

@@ -35,6 +35,8 @@
 #include <devinfoservice.h>
 #include "device_common.h"
 #include "peripheral.h"
+
+#include <driverlib/aon_batmon.h>
 /*********************************************************************
  * MACROS
  */
@@ -791,6 +793,8 @@ static void MotionSm_disable(void)
 
 static void MotionSm_measure(void)
 {
+    uint32_t batVol;
+
     Util_stopClock(&motionClock);
     // measure and start clock
 
@@ -807,6 +811,7 @@ static void MotionSm_measure(void)
         DataService_SetParameter(DS_STATE_ID, 1, &val);
         Util_startClock(&motionClock);
         Led_off();
+
     }
 //#endif
 }
