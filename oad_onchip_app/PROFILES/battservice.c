@@ -137,6 +137,7 @@ static CONST gattAttrType_t battService = { ATT_BT_UUID_SIZE, battServUUID };
 static uint8_t battLevelProps = GATT_PROP_READ | GATT_PROP_NOTIFY;
 static uint8_t battLevel = 100;
 
+#if 0
 // Characteristic Presentation Format of the Battery Level Characteristic.
 static gattCharFormat_t battLevelPresentation = {
   GATT_FORMAT_UINT8,           /* format */
@@ -145,6 +146,7 @@ static gattCharFormat_t battLevelPresentation = {
   GATT_NS_BT_SIG,              /* name space */
   GATT_DESC_LENGTH_UUID        /* desc */
 };
+#endif
 
 static gattCharCfg_t *battLevelClientCharCfg;
 
@@ -482,11 +484,13 @@ static bStatus_t battReadAttrCB(uint16_t connHandle, gattAttribute_t *pAttr,
     *pLen = 1;
     pValue[0] = battLevel;
   }
+#if 0
   else if (uuid == GATT_REPORT_REF_UUID)
   {
     *pLen = HID_REPORT_REF_LEN;
     memcpy(pValue, pAttr->pValue, HID_REPORT_REF_LEN);
   }
+#endif
   else
   {
     status = ATT_ERR_ATTR_NOT_FOUND;
