@@ -81,6 +81,12 @@ bleUserCfg_t user0Cfg = BLE_USER_CFG;
 
 #include "simple_peripheral_oad_onchip.h"
 
+#include "features/power.h"
+
+#include <ti/devices/DeviceFamily.h>
+#include DeviceFamily_constructPath(inc/hw_prcm.h)
+#include DeviceFamily_constructPath(driverlib/sys_ctrl.h)
+
 /*******************************************************************************
  * MACROS
  */
@@ -100,6 +106,7 @@ bleUserCfg_t user0Cfg = BLE_USER_CFG;
 /*******************************************************************************
  * GLOBAL VARIABLES
  */
+
 
 /*******************************************************************************
  * EXTERNS
@@ -122,76 +129,83 @@ extern void AssertHandler(uint8 assertCause, uint8 assertSubcause);
  *
  * @return      None.
  */
+#include "features/led.h"
 int main()
 {
-  /* Register Application callback to trap asserts raised in the Stack */
+    /* Register Application callback to trap asserts raised in the Stack */
 #if 0
-  RegisterAssertCback(AssertHandler);
+    RegisterAssertCback(AssertHandler);
 #endif
-  PIN_init(BoardGpioInitTable);
+    uint32_t rSrc = SysCtrlResetSourceGet();
+
+    PIN_init(BoardGpioInitTable);
 
 #ifdef CACHE_AS_RAM
-  // retain cache during standby
-  Power_setConstraint(PowerCC26XX_SB_VIMS_CACHE_RETAIN);
-  Power_setConstraint(PowerCC26XX_NEED_FLASH_IN_IDLE);
+    // retain cache during standby
+    Power_setConstraint(PowerCC26XX_SB_VIMS_CACHE_RETAIN);
+    Power_setConstraint(PowerCC26XX_NEED_FLASH_IN_IDLE);
 #else
-  // Enable iCache prefetching
-  VIMSConfigure(VIMS_BASE, TRUE, TRUE);
-  // Enable cache
-  VIMSModeSet(VIMS_BASE, VIMS_MODE_ENABLED);
+    // Enable iCache prefetching
+    VIMSConfigure(VIMS_BASE, TRUE, TRUE);
+    // Enable cache
+    VIMSModeSet(VIMS_BASE, VIMS_MODE_ENABLED);
 #endif //CACHE_AS_RAM
 
 #if !defined( POWER_SAVING )
-  /* Set constraints for Standby, powerdown and idle mode */
-  // PowerCC26XX_SB_DISALLOW may be redundant
-  Power_setConstraint(PowerCC26XX_SB_DISALLOW);
-  Power_setConstraint(PowerCC26XX_IDLE_PD_DISALLOW);
+    /* Set constraints for Standby, powerdown and idle mode */
+    // PowerCC26XX_SB_DISALLOW may be redundant
+    Power_setConstraint(PowerCC26XX_SB_DISALLOW);
+    Power_setConstraint(PowerCC26XX_IDLE_PD_DISALLOW);
 #endif // POWER_SAVING
 
 #ifdef ICALL_JT
-  /* Update User Configuration of the stack */
-  user0Cfg.appServiceInfo->timerTickPeriod = Clock_tickPeriod;
-  user0Cfg.appServiceInfo->timerMaxMillisecond  = ICall_getMaxMSecs();
+    /* Update User Configuration of the stack */
+    user0Cfg.appServiceInfo->timerTickPeriod = Clock_tickPeriod;
+    user0Cfg.appServiceInfo->timerMaxMillisecond = ICall_getMaxMSecs();
 #endif  /* ICALL_JT */
-  /* Initialize ICall module */
-  ICall_init();
+    /* Initialize ICall module */
+    ICall_init();
 
-  {
-    /* Find stack entry page */
-    uint32_t stackAddr = findStackBoundaryAddr();
-
-    if(stackAddr == 0xFFFFFFFF)
     {
-      // If we cannot find the stack start address, exit
-      ICall_abort();
+        /* Find stack entry page */
+        uint32_t stackAddr = findStackBoundaryAddr();
+
+        if (stackAddr == 0xFFFFFFFF)
+        {
+            // If we cannot find the stack start address, exit
+            ICall_abort();
+        }
+
+        /* set the stack image header based on the stack addr */
+        const imgHdr_t *stackImageHeader = (imgHdr_t *) stackAddr;
+
+        /* Start tasks of external images - Priority 5 */
+        const ICall_RemoteTask_t remoteTaskTbl[] = {
+                (ICall_RemoteTaskEntry) (stackImageHeader->fixedHdr.prgEntry),
+                5, 1000, &user0Cfg };
+
+        /* Start tasks of external images - Priority 5 */
+        ICall_createRemoteTasksAtRuntime(
+                (ICall_RemoteTask_t *) remoteTaskTbl,
+                (sizeof(remoteTaskTbl) / sizeof(ICall_RemoteTask_t)));
     }
 
-    /* set the stack image header based on the stack addr */
-    const imgHdr_t *stackImageHeader = (imgHdr_t *)stackAddr;
+    /* Kick off profile - Priority 3 */
+    GAPRole_createTask();
 
-    /* Start tasks of external images - Priority 5 */
-    const ICall_RemoteTask_t remoteTaskTbl[] =
+    Pwr_init();
+
+    if (rSrc == RSTSRC_WAKEUP_FROM_SHUTDOWN)
     {
-      (ICall_RemoteTaskEntry) (stackImageHeader->fixedHdr.prgEntry),
-      5,
-      1000,
-      &user0Cfg
-    };
+        Pwr_wakeup();
+    }
 
-    /* Start tasks of external images - Priority 5 */
-    ICall_createRemoteTasksAtRuntime((ICall_RemoteTask_t *) remoteTaskTbl,
-                                     (sizeof(remoteTaskTbl)/sizeof(ICall_RemoteTask_t)));
-  }
+    SimplePeripheral_createTask();
 
-  /* Kick off profile - Priority 3 */
-  GAPRole_createTask();
+    /* enable interrupts and start SYS/BIOS */
+    BIOS_start();
 
-  SimplePeripheral_createTask();
-
-  /* enable interrupts and start SYS/BIOS */
-  BIOS_start();
-
-  return (0);
+    return (0);
 }
 
 

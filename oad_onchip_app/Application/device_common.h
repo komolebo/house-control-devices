@@ -40,7 +40,11 @@
 #define MOTION_SENSITIVITY_6M               (3)
 #define MOTION_SENSITIVITY_7M               (4)
 
-#define TAMPER_PIN                          (Board_PIN_BUTTON0)
+#define POWER_BUTTON_PRESS_STATE            (0)
+#define POWER_BUTTON_RELEASE_STATE          (1)
+
+#define POWER_BTN                           (Board_PIN_BUTTON0)
+#define TAMPER_PIN                          (Board_PIN_BUTTON1)
 #define LED_PIN                             (Board_PIN_RLED)
 
 /*********************************************************************
@@ -95,7 +99,13 @@ typedef enum
     EVT_LED_CLK,            /* LED blinking clock event                    */
     EVT_MOTION_CLK,         /* Motion timer expiration clock event         */
     EVT_GAP_CHANGE,
-    // to handle later:
+
+    // Power manager events
+    EVT_PWR_CLK,
+    EVT_PWR_BTN_PRESS,
+    EVT_PWR_BTN_RELEASE,
+
+    // Sensor events
     EVT_INIT_DONE,
     EVT_CHECK_PRECOND,
     EVT_MODE_CHANGE,

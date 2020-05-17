@@ -196,18 +196,6 @@ static PIN_State buttonPinState;
 // Clock objects for debouncing the buttons
 static Clock_Struct motionClock;
 
-#if 0
-static Clock_Handle motionClockHandle;
-#endif
-/*
- * Application button pin configuration table:
- *   - Buttons interrupts are configured to trigger on falling edge.
- */
-static PIN_Config buttonPinTable[] = {
-    Board_PIN_BUTTON1 | PIN_INPUT_EN | PIN_PULLUP | PIN_IRQ_NEGEDGE,
-    PIN_TERMINATE
-};
-
 // Clock objects for debouncing the buttons
 static Clock_Struct button1DebounceClock;
 
@@ -219,18 +207,9 @@ void CustomDevice_init(uint8_t selfEntity)
     // ******************************************************************
     // Hardware initialization
     // ******************************************************************
-    // Open button pins
-    buttonPinHandle = PIN_open(&buttonPinState, buttonPinTable);
-    if(!buttonPinHandle)
-    {
-        Log_error0("Error initializing button pins");
-        Task_exit();
-    }
-
-
     Adc_init();
     Tamper_init(TAMPER_PIN);
-    Led_init();
+//    Led_init();
 
     // ******************************************************************
     // BLE Service initialization

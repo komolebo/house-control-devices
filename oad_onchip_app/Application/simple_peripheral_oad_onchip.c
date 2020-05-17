@@ -98,6 +98,7 @@
 #include <custom_device_if.h>
 #include <profiles_if.h>
 #include "device_common.h"
+#include "features/power.h"
 
 #include "battservice.h"
 /*********************************************************************
@@ -1094,6 +1095,7 @@ static void SimplePeripheral_processAppMsg(sbpEvt_t *pMsg)
   }
 
   CustomDevice_processApplicationMessage(pMsg);
+  Pwr_handleEvt((appEvt_t)pMsg->hdr.event);
 }
 
 /*********************************************************************
