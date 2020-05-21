@@ -75,7 +75,7 @@ static uint8_t cs_icall_rsp_task_id = INVALID_TASK_ID;
  */
 
 // Service declaration
-static CONST gattAttrType_t DataServiceDecl = { ATT_UUID_SIZE, ConfigServiceUUID };
+static CONST gattAttrType_t DataServiceDecl = { ATT_BT_UUID_SIZE, ConfigServiceUUID };
 
 // Characteristic "Mode" Properties (for declaration)
 static uint8_t cs_ModeProps = GATT_PROP_READ | GATT_PROP_WRITE;
