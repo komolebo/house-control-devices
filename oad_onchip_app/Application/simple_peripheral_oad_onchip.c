@@ -280,12 +280,28 @@ static uint8_t advertData[] =
 
   // service UUID, to notify central devices what services are included
   // in this peripheral
-  0x05,  // length of this data
+  //  0x05,  // length of this data
+    0x03,  // length of this data
   GAP_ADTYPE_16BIT_MORE,      // some of the UUID's, but not all
   LO_UINT16(OAD_RESET_SERVICE_UUID),
   HI_UINT16(OAD_RESET_SERVICE_UUID),
-  LO_UINT16(0xFF00),
-  HI_UINT16(0xFF01)
+//  LO_UINT16(0xFF00),
+//  HI_UINT16(0xFF01),
+
+  0x0D,   // length of this data
+  GAP_ADTYPE_LOCAL_NAME_COMPLETE,
+  'M',
+  'O',
+  'T',
+  'I',
+  'O',
+  'N',
+  ' ',
+  ' ',
+  ' ',
+  ' ',
+  ' ',
+  ' '
 };
 
 static Clock_Struct battPerClock;

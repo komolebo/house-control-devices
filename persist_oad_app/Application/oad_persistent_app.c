@@ -270,7 +270,22 @@ static uint8_t advertData[] =
   0x03,   // length of this data
   GAP_ADTYPE_16BIT_MORE,      // some of the UUID's, but not all
   LO_UINT16(OAD_SERVICE_UUID),
-  HI_UINT16(OAD_SERVICE_UUID)
+  HI_UINT16(OAD_SERVICE_UUID),
+
+  0x0D,   // length of this data
+  GAP_ADTYPE_LOCAL_NAME_COMPLETE,
+  'M',
+  'O',
+  'T',
+  'I',
+  'O',
+  'N',
+  ' ',
+  ' ',
+  ' ',
+  ' ',
+  ' ',
+  ' '
 };
 
 // GAP GATT Attributes
