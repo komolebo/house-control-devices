@@ -199,6 +199,8 @@ static Clock_Struct motionClock;
 // Clock objects for debouncing the buttons
 static Clock_Struct button1DebounceClock;
 
+static uint8_t motionDetectState = 0xFF;
+
 /*********************************************************************
  * FUNCTIONS
  */
@@ -786,8 +788,11 @@ static void MotionSm_measure(void)
     else
     { // motion not detected, keep measuring
         // TODO: set correct service
-        uint8_t val = 0;
-        DataService_SetParameter(DS_STATE_ID, 1, &val);
+        if (motionDetectState != DS_NOT_TRIGGERED)
+        {
+            motionDetectState = DS_NOT_TRIGGERED;
+            DataService_SetParameter(DS_STATE_ID, 1, &motionDetectState);
+        }
         Util_startClock(&motionClock);
         Led_off();
 
@@ -806,8 +811,11 @@ static void MotionSm_detect(void)
     Util_restartClock(&motionClock, MOTION_DETECTION_HOLDON_SEC * 1000);
 
     // TODO: set correct service
-    uint8_t val = DS_TRIGGERED;
-    DataService_SetParameter(DS_STATE_ID, 1, &val);
+    if (motionDetectState != DS_TRIGGERED)
+    {
+        motionDetectState = DS_TRIGGERED;
+        DataService_SetParameter(DS_STATE_ID, 1, &motionDetectState);
+    }
 }
 
 static bool isLedEnabled()
