@@ -122,6 +122,8 @@ static uint8_t battCriticalLevel;
 
 // Maximum battery level.
 static uint16_t battMaxLevel = BATT_MAX_VOLTAGE;
+// Maximum battery level.
+static uint16_t battMinLevel = BATT_MIN_VOLTAGE;
 
 // Measurement teardown callback.
 static battServiceTeardownCB_t battServiceTeardownCB = NULL;
@@ -599,7 +601,7 @@ static uint8_t battMeasure(void)
 
   // Read the battery voltage (V), only the first 12 bits
   percent = AONBatMonBatteryVoltageGet();
-
+#if 0
   // Convert to from V to mV to avoid fractions.
   // Fractional part is in the lower 8 bits thus converting is done as follows:
   // (1/256)/(1/1000) = 1000/256 = 125/32
@@ -608,6 +610,19 @@ static uint8_t battMeasure(void)
   percent = (percent * 125) >> 5;
   // Convert to percentage of maximum voltage.
   percent = ((percent* 100) / battMaxLevel);
+#endif
+
+  percent = (percent * 125) >> 5; // mvolts
+
+  if (percent > battMinLevel)
+  {
+      percent = 100 * (percent - battMinLevel);
+      percent /= (battMaxLevel - battMinLevel);
+  }
+  else
+  {
+      percent = 0;
+  }
 
   // Call measurement teardown callback
   if (battServiceTeardownCB != NULL)

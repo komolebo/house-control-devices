@@ -63,6 +63,7 @@ extern "C"
 
 // Max voltage (mV)
 #define BATT_MAX_VOLTAGE            3273
+#define BATT_MIN_VOLTAGE            1760
 
 // Battery Service Get/Set Parameters
 #define BATT_PARAM_LEVEL                0

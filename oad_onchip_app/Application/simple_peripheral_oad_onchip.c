@@ -180,7 +180,7 @@
 #define CONNECTION_EVENT_REGISTRATION_CAUSE(RegisterCause) (connectionEventRegisterCauseBitMap & RegisterCause )
 
 // Battery measurement period in ms
-#define DEFAULT_BATT_PERIOD                             15000
+#define DEFAULT_BATT_PERIOD                             5000
 /*********************************************************************
  * TYPEDEFS
  */
@@ -525,7 +525,7 @@ static void SimplePeripheral_init(void)
                       SBP_PERIODIC_EVT_PERIOD, 0, FALSE, SBP_PERIODIC_EVT);
 
   Util_constructClock(&battPerClock, battClockHandler,
-                      DEFAULT_BATT_PERIOD, 0, false,
+                      DEFAULT_BATT_PERIOD, 0, true,
                       BATT_PERIODIC_EVT);
 
   // For on-chip OAD stack-only download must be followed by app-only
@@ -1457,7 +1457,7 @@ static void battClockHandler(UArg arg)
  */
 static void battPerTask(void)
 {
-    if (gapProfileState == GAPROLE_CONNECTED)
+//    if (gapProfileState == GAPROLE_CONNECTED)
     {
         // Perform battery level check.
         Batt_MeasLevel();
